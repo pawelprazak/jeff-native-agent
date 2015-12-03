@@ -1,5 +1,32 @@
+*~
+*.log
+*.bak
+*.tmp
+*.swp
+*.lock
+
+# CMake
 CMakeCache.txt
 CMakeFiles
 Makefile
 cmake_install.cmake
 install_manifest.txt
+
+# IDEA CLion
+*.ipr
+*.iws
+*.iml
+.idea
+.idea_modules
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# KDE directory preferences
+.directory
+
+# OS X
+.DS_Store
+.Trashes

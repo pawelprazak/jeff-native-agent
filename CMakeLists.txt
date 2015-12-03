@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.3)
-project(jeffpp)
+project(jeff-native-agent)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
@@ -9,4 +9,4 @@ include_directories(
 )
 
 set(SOURCE_FILES main.cpp)
-add_executable(jeffpp ${SOURCE_FILES})
+add_library(jeff-native-agent SHARED ${SOURCE_FILES})

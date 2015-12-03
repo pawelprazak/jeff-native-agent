@@ -10,17 +10,17 @@ using namespace std;
 
 typedef struct {
     /* JVMTI Environment */
-    jvmtiEnv *jvmti : NULL;
-    jboolean vm_is_dead : false;
-    jboolean vm_is_initialized : false;
-    jboolean vm_is_started : false;
+    jvmtiEnv *jvmti;
+    jboolean vm_is_dead;
+    jboolean vm_is_initialized;
+    jboolean vm_is_started;
     /* Data access Lock */
     jrawMonitorID lock;
 } GlobalAgentData;
 
 static GlobalAgentData *gdata;
 
-jint main(JavaVM *jvm, char *options);
+jint init(JavaVM *jvm, char *options);
 
 void check_jvmti_error(jvmtiEnv *jvmti, jvmtiError errnum, const char *str);
 
@@ -51,7 +51,7 @@ exit_critical_section(jvmtiEnv *jvmti) {
  */
 JNIEXPORT jint JNICALL
 Agent_OnLoad(JavaVM *jvm, char *options, void *reserved) {
-    return main(jvm, options);
+    return init(jvm, options);
 };
 
 /**
@@ -60,7 +60,7 @@ Agent_OnLoad(JavaVM *jvm, char *options, void *reserved) {
  */
 JNIEXPORT jint JNICALL
 Agent_OnAttach(JavaVM *jvm, char *options, void *reserved) {
-    return main(jvm, options);
+    return init(jvm, options);
 };
 
 /**
@@ -96,8 +96,6 @@ VMInitCallback(jvmtiEnv *jvmti, JNIEnv *env, jthread thread) {
 
         /* Indicate VM has initialized */
         gdata->vm_is_initialized = JNI_TRUE;
-
-        afterInit(jvmti);
     }
     exit_critical_section(jvmti);
 }
@@ -193,7 +191,7 @@ ExceptionCatchCallback(jvmtiEnv *jvmti,
 
 }
 
-jint main(JavaVM *jvm, char *options) {
+jint init(JavaVM *jvm, char *options) {
     jvmtiEnv *jvmti = NULL;
     jint result = jvm->GetEnv((void **) &jvmti, JVMTI_VERSION_1_2);
     if (result != JNI_OK) {

@@ -5,6 +5,9 @@
 *.swp
 *.lock
 
+# C++
+*.so
+
 # CMake
 CMakeCache.txt
 CMakeFiles

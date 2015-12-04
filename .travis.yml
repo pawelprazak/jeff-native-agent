@@ -4,7 +4,10 @@ compiler:
 - gcc
 - clang
 
-script: cmake --build out --target all
+script:
+- mkdir out
+- cmake --build out --target all
+
 branches:
   only:
   - master

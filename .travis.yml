@@ -6,10 +6,12 @@ compiler:
 - gcc
 - clang
 
-before_script: cmake CMakeLists.txt
+before_script:
+  - mkdir build
+  - cd build
+  - cmake ..
 
 script:
-  - $CXX --version
   - make
 
 branches:

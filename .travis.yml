@@ -4,8 +4,7 @@ compiler:
 - gcc
 - clang
 
-script: cmake --build . --target all
-
+script: cmake --build out --target all
 branches:
   only:
   - master

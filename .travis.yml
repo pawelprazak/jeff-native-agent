@@ -3,7 +3,7 @@ sudo: false
 language: cpp
 
 compiler:
-- gcc
+#- gcc # the defualt gcc 4.6.x deos not support -std=c++11
 - clang
 
 before_script:

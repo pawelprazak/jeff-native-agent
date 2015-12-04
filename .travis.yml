@@ -21,8 +21,8 @@ branches:
 env:
   matrix:
     - BUILD_TYPE=Debug
-    - BUILD_TYPE=Release
+#    - BUILD_TYPE=Release
 
 os:
 - linux
-- osx
+#- osx

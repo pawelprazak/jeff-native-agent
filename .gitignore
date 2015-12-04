@@ -6,6 +6,7 @@
 *.lock
 
 # C++
+*.a
 *.so
 
 # CMake

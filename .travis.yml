@@ -7,9 +7,9 @@ compiler:
 - clang
 
 before_script:
-  - mkdir build
-  - cd build
-  - cmake ..
+- mkdir build
+- cd build
+- cmake ..
 
 script:
   - make
@@ -22,3 +22,7 @@ env:
   matrix:
     - BUILD_TYPE=Debug
     - BUILD_TYPE=Release
+
+os:
+- linux
+- osx

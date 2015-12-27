@@ -4,3 +4,7 @@
 
     cmake --build .
     java -agentpath:./libjeff-native-agent.so
+
+## Dependecies
+
+- JDK (mainly jvmti.h)

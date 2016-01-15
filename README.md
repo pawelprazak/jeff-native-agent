@@ -4,9 +4,14 @@
 
 ## Basic scripts
 
-    ./build.sh
-    ./hello.sh
+    ./build.sh && ./hello.sh
 
 ## Dependecies
 
-- JDK (mainly jvmti.h)
+- JDK (mainly `jvmti.h`)
+
+## JVM TI and JNI
+
+[JVM Tool Interface Version 1.2](https://docs.oracle.com/javase/8/docs/platform/jvmti/jvmti.html)
+
+[Java Native Interface Specification](https://docs.oracle.com/javase/8/docs/technotes/guides/jni/spec/jniTOC.html)

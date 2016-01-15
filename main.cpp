@@ -1,12 +1,19 @@
+/**
+ * see: https://docs.oracle.com/javase/8/docs/platform/jvmti/jvmti.html
+ */
+
 #include <iostream>
 #include <string.h>
 #include <jvmti.h>
 
-#include "jni.h"
-#include "jvmti.h"
-#include "jvmticmlr.h"
-
 using namespace std;
+
+/* Some constant maximum sizes */
+enum {
+    MAX_TOKEN_LENGTH = 16,
+    MAX_THREAD_NAME_LENGTH = 512,
+    MAX_METHOD_NAME_LENGTH = 1024
+};
 
 typedef struct {
     /* JVMTI Environment */
@@ -20,7 +27,11 @@ typedef struct {
 
 static GlobalAgentData *gdata;
 
-jint init(JavaVM *jvm, char *options);
+void *allocate(jvmtiEnv *jvmti, jint len);
+
+void deallocate(jvmtiEnv *jvmti, void *ptr);
+
+static void get_thread_name(jvmtiEnv *jvmti, jthread thread, char *tname, int maxlen);
 
 void check_jvmti_error(jvmtiEnv *jvmti, jvmtiError errnum, const char *str);
 
@@ -32,11 +43,16 @@ static void enter_critical_section(jvmtiEnv *jvmti);
 
 static void exit_critical_section(jvmtiEnv *jvmti);
 
+jint init(JavaVM *jvm, char *options);
+
+jint live(jvmtiEnv *jvmti);
+
 /**
  * The VM will start the agent by calling this function.
  */
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection"
+
 JNIEXPORT jint JNICALL
 Agent_OnLoad(JavaVM *jvm, char *options, void *reserved) {
     return init(jvm, options);
@@ -49,6 +65,7 @@ Agent_OnLoad(JavaVM *jvm, char *options, void *reserved) {
  */
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection"
+
 JNIEXPORT jint JNICALL
 Agent_OnAttach(JavaVM *jvm, char *options, void *reserved) {
     return init(jvm, options);
@@ -61,8 +78,10 @@ Agent_OnAttach(JavaVM *jvm, char *options, void *reserved) {
  */
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection"
+
 JNIEXPORT void JNICALL
 Agent_OnUnload(JavaVM *vm) {
+    /* Make sure all allocated space is freed */
     delete (gdata);
 };
 #pragma clang diagnostic pop
@@ -85,6 +104,20 @@ static void JNICALL ExceptionCallback(jvmtiEnv *jvmti, JNIEnv *jni, jthread thre
 static void JNICALL ExceptionCatchCallback(jvmtiEnv *jvmti, JNIEnv *jni, jthread thread, jmethodID method,
                                            jlocation location, jobject exception);
 
+static void JNICALL ThreadStartCallback(jvmtiEnv *jvmti,
+                                        JNIEnv *env,
+                                        jthread thread);
+
+static void JNICALL ThreadEndCallback(jvmtiEnv *jvmti,
+                                      JNIEnv *env,
+                                      jthread thread);
+
+static void JNICALL ResourceExhaustedCallback(jvmtiEnv *jvmti,
+                                              JNIEnv *env,
+                                              jint flags,
+                                              const void *reserved,
+                                              const char *description);
+
 jint init(JavaVM *jvm, char *options) {
     jvmtiEnv *jvmti;
     jint result = jvm->GetEnv((void **) &jvmti, JVMTI_VERSION_1_2);
@@ -92,8 +125,11 @@ jint init(JavaVM *jvm, char *options) {
         /* This means that the VM was unable to obtain this version of the
          *   JVMTI interface, this is a fatal error.
          */
-        fatal_error("ERROR: Unable to create jvmtiEnv, GetEnv failed, error=%d\n", result);
-        return JNI_ERR;
+        fatal_error("ERROR: Unable to access JVMTI Version 1.2 (0x%x),"
+                            " is your JDK a 6.0 or newer version?"
+                            " JNIEnv's GetEnv() returned %d\n",
+                    JVMTI_VERSION_1_2, result);
+//        return JNI_ERR;
     }
 
     /* Setup initial global agent data area */
@@ -141,15 +177,6 @@ jint init(JavaVM *jvm, char *options) {
     error = jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_EXCEPTION_CATCH, (jthread) NULL);
     check_jvmti_error(jvmti, error, "Cannot set event notification");
 
-    error = jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_THREAD_START, (jthread) NULL);
-    check_jvmti_error(jvmti, error, "Cannot set event notification");
-
-    error = jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_THREAD_END, (jthread) NULL);
-    check_jvmti_error(jvmti, error, "Cannot set event notification");
-
-    error = jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_RESOURCE_EXHAUSTED, (jthread) NULL);
-    check_jvmti_error(jvmti, error, "Cannot set event notification");
-
     jvmtiEventCallbacks callbacks = jvmtiEventCallbacks();
 
     callbacks.VMStart = &VMStartCallback;    /* JVMTI_EVENT_VM_START */
@@ -165,10 +192,10 @@ jint init(JavaVM *jvm, char *options) {
     callbacks.Exception = &ExceptionCallback;           /* JVMTI_EVENT_EXCEPTION */
     callbacks.ExceptionCatch = &ExceptionCatchCallback; /* JVMTI_EVENT_EXCEPTION_CATCH */
 
-//    callbacks.ThreadStart = &ThreadStartCallback; /* JVMTI_EVENT_THREAD_START */
-//    callbacks.ThreadEnd = &ThreadEndCallback;     /* JVMTI_EVENT_THREAD_END */
+    callbacks.ThreadStart = &ThreadStartCallback; /* JVMTI_EVENT_THREAD_START */
+    callbacks.ThreadEnd = &ThreadEndCallback;     /* JVMTI_EVENT_THREAD_END */
 
-//    callbacks.ResourceExhausted = &ResourceExhaustedCallback; /* JVMTI_EVENT_RESOURCE_EXHAUSTED */
+    callbacks.ResourceExhausted = &ResourceExhaustedCallback; /* JVMTI_EVENT_RESOURCE_EXHAUSTED */
 
     error = jvmti->SetEventCallbacks(&callbacks, (jint) sizeof(callbacks));
     check_jvmti_error(jvmti, error, "Cannot set jvmti callbacks");
@@ -177,6 +204,21 @@ jint init(JavaVM *jvm, char *options) {
      */
     error = jvmti->CreateRawMonitor("agent data", &(gdata->lock));
     check_jvmti_error(jvmti, error, "Cannot create raw monitor");
+
+    return JNI_OK;
+}
+
+jint live(jvmtiEnv *jvmti) {
+    jvmtiError error;
+
+    error = jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_THREAD_START, (jthread) NULL);
+    check_jvmti_error(jvmti, error, "Cannot set event notification");
+
+    error = jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_THREAD_END, (jthread) NULL);
+    check_jvmti_error(jvmti, error, "Cannot set event notification");
+
+    error = jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_RESOURCE_EXHAUSTED, (jthread) NULL);
+    check_jvmti_error(jvmti, error, "Cannot set event notification");
 
     return JNI_OK;
 }
@@ -200,11 +242,17 @@ static void JNICALL
 VMInitCallback(jvmtiEnv *jvmti, JNIEnv *env, jthread thread) {
     enter_critical_section(jvmti);
     {
-        /* The VM has initialized. */
-        stdout_message("VMInit\n");
+        char tname[MAX_THREAD_NAME_LENGTH];
+
+        /* The VM has started. */
+        get_thread_name(jvmti, thread, tname, sizeof(tname));
+        stdout_message("VMInit %s\n", tname);
 
         /* Indicate VM has initialized */
         gdata->vm_is_initialized = JNI_TRUE;
+
+        /* The VM is now initialized, at this time we make our requests for additional events. */
+        live(jvmti);
     }
     exit_critical_section(jvmti);
 }
@@ -212,26 +260,26 @@ VMInitCallback(jvmtiEnv *jvmti, JNIEnv *env, jthread thread) {
 /* Callback for JVMTI_EVENT_VM_DEATH */
 static void JNICALL
 VMDeathCallback(jvmtiEnv *jvmti, JNIEnv *env) {
-//    enter_critical_section(jvmti);
-//    {
-    /* The VM has died. */
-    stdout_message("VMDeath\n");
+    enter_critical_section(jvmti);
+    {
+        /* The VM has died. */
+        stdout_message("VMDeath\n");
 
-    /* The critical section here is important to hold back the VM death
-     *    until all other callbacks have completed.
-     */
+        /* The critical section here is important to hold back the VM death
+         *    until all other callbacks have completed.
+         */
 
-    /* Since this critical section could be holding up other threads
-     *   in other event callbacks, we need to indicate that the VM is
-     *   dead so that the other callbacks can short circuit their work.
-     *   We don't expect any further events after VmDeath but we do need
-     *   to be careful that existing threads might be in our own agent
-     *   callback code.
-     */
-    gdata->vm_is_dead = JNI_TRUE;
+        /* Since this critical section could be holding up other threads
+         *   in other event callbacks, we need to indicate that the VM is
+         *   dead so that the other callbacks can short circuit their work.
+         *   We don't expect any further events after VmDeath but we do need
+         *   to be careful that existing threads might be in our own agent
+         *   callback code.
+         */
+        gdata->vm_is_dead = JNI_TRUE;
 
-//    }
-//    exit_critical_section(jvmti);
+    }
+    exit_critical_section(jvmti);
 }
 
 static void JNICALL
@@ -274,13 +322,36 @@ ExceptionCallback(jvmtiEnv *jvmti,
                   jmethodID catch_method,
                   jlocation catch_location) {
 
+    jvmtiError error;
+
     char *name;
     char *sig;
     char *gsig;
-    jvmtiError error = jvmti->GetMethodName(method, &name, &sig, &gsig);
+    error = jvmti->GetMethodName(method, &name, &sig, &gsig);
     check_jvmti_error(jvmti, error, "Unable to get method information.");
 
     printf("Exception in Method:%s%s\n", name, sig);
+
+    // Get the exception class
+    jclass exceptionClass = jni->GetObjectClass(exception);
+
+    // Get the class object's class descriptor
+    jclass classType = jni->GetObjectClass(exceptionClass);
+
+    // Find the getSimpleName() method in the class object
+    jmethodID methodId = jni->GetMethodID(classType, "getSimpleName", "()Ljava/lang/String;");
+    jstring className = (jstring) jni->CallObjectMethod(exceptionClass, methodId);
+
+    // Convert to native string
+    const char *nativeString = jni->GetStringUTFChars(className, 0);
+
+    // Use your class name string
+    printf("Exception type:%s\n", nativeString);
+
+    // And finally, release the JNI objects after usage
+    jni->ReleaseStringUTFChars(className, nativeString);
+    jni->DeleteLocalRef(classType);
+    jni->DeleteLocalRef(exceptionClass);
 };
 
 static void JNICALL
@@ -290,16 +361,133 @@ ExceptionCatchCallback(jvmtiEnv *jvmti,
                        jmethodID method,
                        jlocation location,
                        jobject exception) {
+    jvmtiError error;
+
     char *name;
     char *sig;
     char *gsig;
-    jvmtiError error = jvmti->GetMethodName(method, &name, &sig, &gsig);
+    error = jvmti->GetMethodName(method, &name, &sig, &gsig);
     check_jvmti_error(jvmti, error, "Unable to get method information.");
 
     printf("Cought exception in Method:%s%s\n", name, sig);
 
+    /* Exception Class name */
+    // Get the exception class
+    jclass exceptionClass = jni->GetObjectClass(exception);
+
+    // Get the class object's class descriptor
+    jclass classType = jni->GetObjectClass(exceptionClass);
+
+    // Find the getSimpleName() method in the class object
+    jmethodID methodId = jni->GetMethodID(classType, "getSimpleName", "()Ljava/lang/String;");
+    jstring className = (jstring) jni->CallObjectMethod(exceptionClass, methodId);
+
+    // Convert to native string
+    const char *nativeString = jni->GetStringUTFChars(className, 0);
+
+    // Use your class name string
+    printf("Exception type:%s\n", nativeString);
+
+    // And finally, release the JNI objects after usage
+    jni->ReleaseStringUTFChars(className, nativeString);
+    jni->DeleteLocalRef(classType);
+    jni->DeleteLocalRef(exceptionClass);
+
+    /* Stack trace */
+    int depth = 5;
+    jvmtiFrameInfo frames[depth];
+    jint count;
+
+    error = jvmti->GetStackTrace(thread, 0, depth, (jvmtiFrameInfo *) &frames, &count);
+    check_jvmti_error(jvmti, error, "Unable to get stack trace.");
+
+    printf("Exception Stack Trace\n");
+    printf("=====================\n");
+    printf("Stack Trace Depth: %d\n", count);
+
+    char *methodName = "yet_to_call()";
+    char *declaringClassName;
+    jclass declaringClass;
+
+    for (int i=0; i < count; i++) {
+        error = jvmti->GetMethodName(frames[i].method, &methodName, NULL, NULL);
+
+        if (error == JVMTI_ERROR_NONE) {
+            error = jvmti->GetMethodDeclaringClass(frames[i].method, &declaringClass);
+            error = jvmti->GetClassSignature(declaringClass, &declaringClassName, NULL);
+
+            if (error == JVMTI_ERROR_NONE) {
+                printf("at method %s() in class %s\n", methodName, declaringClassName);
+            }
+        }
+    }
+    printf("=====================\n");
 }
 
+static void JNICALL
+ThreadStartCallback(jvmtiEnv *jvmti,
+                    JNIEnv *env,
+                    jthread thread) {
+    enter_critical_section(jvmti);
+    {
+        /* It's possible we get here right after VmDeath event, be careful */
+        if (!gdata->vm_is_dead) {
+            char tname[MAX_THREAD_NAME_LENGTH];
+
+            get_thread_name(jvmti, thread, tname, sizeof(tname));
+            stdout_message("ThreadStart %s\n", tname);
+        }
+    }
+    exit_critical_section(jvmti);
+}
+
+
+static void JNICALL
+ThreadEndCallback(jvmtiEnv *jvmti,
+                  JNIEnv *env,
+                  jthread thread) {
+    enter_critical_section(jvmti);
+    {
+        /* It's possible we get here right after VmDeath event, be careful */
+        if (!gdata->vm_is_dead) {
+            char tname[MAX_THREAD_NAME_LENGTH];
+
+            get_thread_name(jvmti, thread, tname, sizeof(tname));
+            stdout_message("ThreadEnd %s\n", tname);
+        }
+    }
+    exit_critical_section(jvmti);
+}
+
+
+static void JNICALL
+ResourceExhaustedCallback(jvmtiEnv *jvmti,
+                          JNIEnv *env,
+                          jint flags,
+                          const void *reserved,
+                          const char *description) {
+    enter_critical_section(jvmti);
+    {
+        /* It's possible we get here right after VmDeath event, be careful */
+        if (!gdata->vm_is_dead) {
+            switch (flags) {
+                case JVMTI_RESOURCE_EXHAUSTED_OOM_ERROR:
+                    stdout_message("Out Of Memory Error, %s\n", description);
+                    break;
+                case JVMTI_RESOURCE_EXHAUSTED_JAVA_HEAP:
+                    stdout_message("Exhausted Java Heap, %s\n", description);
+                    break;
+                case JVMTI_RESOURCE_EXHAUSTED_THREADS:
+                    stdout_message("Exhausted threads, %s\n", description);
+                    break;
+                default:
+                    stdout_message("Unknown, %s\n", description);
+                    break;
+            }
+        }
+    }
+    exit_critical_section(jvmti);
+}
 
 /* ------------------------------------------------------------------- */
 /* Generic JVMTI utility functions */
@@ -318,6 +506,59 @@ check_jvmti_error(jvmtiEnv *jvmti, jvmtiError errnum, const char *str) {
         fatal_error("ERROR: JVMTI: %d(%s): %s\n", errnum,
                     (errnum_str == NULL ? "Unknown" : errnum_str),
                     (str == NULL ? "" : str));
+    }
+}
+
+/* All memory allocated by JVMTI must be freed by the JVMTI Deallocate
+ *   interface.
+ */
+void
+deallocate(jvmtiEnv *jvmti, void *ptr) {
+    jvmtiError error;
+
+    error = jvmti->Deallocate((unsigned char *) ptr);
+    check_jvmti_error(jvmti, error, "Cannot deallocate memory");
+}
+
+/* Allocation of JVMTI managed memory */
+void *
+allocate(jvmtiEnv *jvmti, jint len) {
+    jvmtiError error;
+    void *ptr;
+
+    error = jvmti->Allocate(len, (unsigned char **) &ptr);
+    check_jvmti_error(jvmti, error, "Cannot allocate memory");
+    return ptr;
+}
+
+/* Get a name for a jthread */
+void
+static get_thread_name(jvmtiEnv *jvmti, jthread thread, char *tname, int maxlen) {
+    jvmtiThreadInfo info;
+    jvmtiError error;
+
+    /* Make sure the stack variables are garbage free */
+    (void) memset(&info, 0, sizeof(info));
+
+    /* Assume the name is unknown for now */
+    (void) strcpy(tname, "Unknown");
+
+    /* Get the thread information, which includes the name */
+    error = jvmti->GetThreadInfo(thread, &info);
+    check_jvmti_error(jvmti, error, "Cannot get thread info");
+
+    /* The thread might not have a name, be careful here. */
+    if (info.name != NULL) {
+        int len;
+
+        /* Copy the thread name into tname if it will fit */
+        len = (int) strlen(info.name);
+        if (len < maxlen) {
+            (void) strcpy(tname, info.name);
+        }
+
+        /* Every string allocated by JVMTI needs to be freed */
+        deallocate(jvmti, (void *) info.name);
     }
 }
 

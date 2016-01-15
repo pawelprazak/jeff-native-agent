@@ -2,8 +2,10 @@
 
 [![Build Status](https://travis-ci.org/pawelprazak/jeff-native-agent.svg?branch=master)](https://travis-ci.org/pawelprazak/jeff-native-agent)
 
-    cmake --build .
-    java -agentpath:./libjeff-native-agent.so
+## Basic scripts
+
+    ./build.sh
+    ./hello.sh
 
 ## Dependecies
 

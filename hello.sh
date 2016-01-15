@@ -1,3 +1,3 @@
 #! /bin/bash
 
-java -agentpath:./libjeff-native-agent.so
+java -agentpath:build/libjeff-native-agent.so

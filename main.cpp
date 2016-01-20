@@ -2,9 +2,15 @@
  * see: https://docs.oracle.com/javase/8/docs/platform/jvmti/jvmti.html
  */
 
+#include <limits>
 #include <iostream>
-#include <string.h>
-#include <jvmti.h>
+#include <sstream>
+#include <vector>
+#include <memory>
+#include <cstdarg>
+#include <ctime>
+#include "string.h"
+#include "jvmti.h"
 
 using namespace std;
 
@@ -27,6 +33,8 @@ typedef struct {
 
 static GlobalAgentData *gdata;
 
+string get_method_name(jvmtiEnv *jvmti, jmethodID method);
+
 void *allocate(jvmtiEnv *jvmti, jint len);
 
 void deallocate(jvmtiEnv *jvmti, void *ptr);
@@ -36,6 +44,8 @@ static void get_thread_name(jvmtiEnv *jvmti, jthread thread, char *tname, int ma
 void check_jvmti_error(jvmtiEnv *jvmti, jvmtiError errnum, const char *str);
 
 void fatal_error(const char *format, ...);
+
+void stderr_message(const char *format, ...);
 
 void stdout_message(const char *format, ...);
 
@@ -104,19 +114,12 @@ static void JNICALL ExceptionCallback(jvmtiEnv *jvmti, JNIEnv *jni, jthread thre
 static void JNICALL ExceptionCatchCallback(jvmtiEnv *jvmti, JNIEnv *jni, jthread thread, jmethodID method,
                                            jlocation location, jobject exception);
 
-static void JNICALL ThreadStartCallback(jvmtiEnv *jvmti,
-                                        JNIEnv *env,
-                                        jthread thread);
+static void JNICALL ThreadStartCallback(jvmtiEnv *jvmti, JNIEnv *env, jthread thread);
 
-static void JNICALL ThreadEndCallback(jvmtiEnv *jvmti,
-                                      JNIEnv *env,
-                                      jthread thread);
+static void JNICALL ThreadEndCallback(jvmtiEnv *jvmti, JNIEnv *env, jthread thread);
 
-static void JNICALL ResourceExhaustedCallback(jvmtiEnv *jvmti,
-                                              JNIEnv *env,
-                                              jint flags,
-                                              const void *reserved,
-                                              const char *description);
+static void JNICALL ResourceExhaustedCallback(jvmtiEnv *jvmti, JNIEnv *env, jint flags,
+                                              const void *reserved, const char *description);
 
 jint init(JavaVM *jvm, char *options) {
     jvmtiEnv *jvmti;
@@ -125,11 +128,11 @@ jint init(JavaVM *jvm, char *options) {
         /* This means that the VM was unable to obtain this version of the
          *   JVMTI interface, this is a fatal error.
          */
-        fatal_error("ERROR: Unable to access JVMTI Version 1.2 (0x%x),"
-                            " is your JDK a 6.0 or newer version?"
-                            " JNIEnv's GetEnv() returned %d\n",
-                    JVMTI_VERSION_1_2, result);
-//        return JNI_ERR;
+        stderr_message("ERROR: Unable to access JVMTI Version 1.2 (0x%x),"
+                               " is your JDK a 6.0 or newer version?"
+                               " JNIEnv's GetEnv() returned %d\n",
+                       JVMTI_VERSION_1_2, result);
+        return JNI_ERR;
     }
 
     /* Setup initial global agent data area */
@@ -212,7 +215,7 @@ jint live(jvmtiEnv *jvmti) {
 
     error = jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_RESOURCE_EXHAUSTED, (jthread) NULL);
     check_jvmti_error(jvmti, error, "Cannot set event notification");
-    
+
     error = jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_EXCEPTION, (jthread) NULL);
     check_jvmti_error(jvmti, error, "Cannot set event notification");
 
@@ -279,51 +282,35 @@ static void JNICALL VMDeathCallback(jvmtiEnv *jvmti, JNIEnv *env) {
 }
 
 static void JNICALL MethodEntryCallback(jvmtiEnv *jvmti,
-                    JNIEnv *jni,
-                    jthread thread,
-                    jmethodID method) {
-    char *name;
-    char *sig;
-    char *gsig;
-    jvmtiError error = jvmti->GetMethodName(method, &name, &sig, &gsig);
-    check_jvmti_error(jvmti, error, "Unable to get method information.");
-
-    printf("Enter Method:%s%s\n", name, sig);
+                                        JNIEnv *jni,
+                                        jthread thread,
+                                        jmethodID method) {
+    string methodName = get_method_name(jvmti, method);
+    stdout_message("Enter Method: %s\n", methodName.c_str());
 }
 
 static void JNICALL MethodExitCallback(jvmtiEnv *jvmti,
-                   JNIEnv *jni,
-                   jthread thread,
-                   jmethodID method,
-                   jboolean was_popped_by_exception,
-                   jvalue return_value) {
-    char *name;
-    char *sig;
-    char *gsig;
-    jvmtiError error = jvmti->GetMethodName(method, &name, &sig, &gsig);
-    check_jvmti_error(jvmti, error, "Unable to get method information.");
-
-    printf("Exit Method:%s%s\n", name, sig);
+                                       JNIEnv *jni,
+                                       jthread thread,
+                                       jmethodID method,
+                                       jboolean was_popped_by_exception,
+                                       jvalue return_value) {
+    string methodName = get_method_name(jvmti, method);
+    stdout_message("Exit Method%s: %s\n", was_popped_by_exception == JNI_TRUE ? " (exception)" : "",
+                   methodName.c_str());
 }
 
 static void JNICALL ExceptionCallback(jvmtiEnv *jvmti,
-                  JNIEnv *jni,
-                  jthread thread,
-                  jmethodID method,
-                  jlocation location,
-                  jobject exception,
-                  jmethodID catch_method,
-                  jlocation catch_location) {
+                                      JNIEnv *jni,
+                                      jthread thread,
+                                      jmethodID method,
+                                      jlocation location,
+                                      jobject exception,
+                                      jmethodID catch_method,
+                                      jlocation catch_location) {
 
-    jvmtiError error;
-
-    char *name;
-    char *sig;
-    char *gsig;
-    error = jvmti->GetMethodName(method, &name, &sig, &gsig);
-    check_jvmti_error(jvmti, error, "Unable to get method information.");
-
-    printf("Exception in Method:%s%s\n", name, sig);
+    string methodName = get_method_name(jvmti, method);
+    stdout_message("Uncought exception in Method: %s\n", methodName.c_str());
 
     // Get the exception class
     jclass exceptionClass = jni->GetObjectClass(exception);
@@ -348,37 +335,31 @@ static void JNICALL ExceptionCallback(jvmtiEnv *jvmti,
 };
 
 static void JNICALL ExceptionCatchCallback(jvmtiEnv *jvmti,
-                       JNIEnv *jni,
-                       jthread thread,
-                       jmethodID method,
-                       jlocation location,
-                       jobject exception) {
-    jvmtiError error;
+                                           JNIEnv *jni,
+                                           jthread thread,
+                                           jmethodID method,
+                                           jlocation location,
+                                           jobject exception) {
 
-    char *name;
-    char *sig;
-    char *gsig;
-    error = jvmti->GetMethodName(method, &name, &sig, &gsig);
-    check_jvmti_error(jvmti, error, "Unable to get method information.");
-
-    printf("Cought exception in Method:%s%s\n", name, sig);
+    string methodName = get_method_name(jvmti, method);
+    stdout_message("Cought exception in Method: %s\n", methodName.c_str());
 
     /* Exception Class name */
     // Get the exception class
-    jclass exceptionClass = jni->GetObjectClass(exception);
+    jclass exceptionType = jni->GetObjectClass(exception);
 
     // Get the class object's class descriptor
-    jclass classType = jni->GetObjectClass(exceptionClass);
+    jclass classType = jni->GetObjectClass(exceptionType);
 
     char *exceptionSignature;
-    error = jvmti->GetClassSignature(classType, &exceptionSignature, NULL);
+    jvmtiError error = jvmti->GetClassSignature(classType, &exceptionSignature, NULL);
     check_jvmti_error(jvmti, error, "Unable to get class signature.");
 
     printf("Exception signature:%s\n", exceptionSignature);
 
     // Find the getSimpleName() method in the class object
     jmethodID methodId = jni->GetMethodID(classType, "getSimpleName", "()Ljava/lang/String;");
-    jstring className = (jstring) jni->CallObjectMethod(exceptionClass, methodId);
+    jstring className = (jstring) jni->CallObjectMethod(exceptionType, methodId);
 
     // Convert to native string
     const char *nativeString = jni->GetStringUTFChars(className, 0);
@@ -389,7 +370,7 @@ static void JNICALL ExceptionCatchCallback(jvmtiEnv *jvmti,
     // And finally, release the JNI objects after usage
     jni->ReleaseStringUTFChars(className, nativeString);
     jni->DeleteLocalRef(classType);
-    jni->DeleteLocalRef(exceptionClass);
+    jni->DeleteLocalRef(exceptionType);
 
     /* Stack trace */
     // int depth = 5;
@@ -423,8 +404,8 @@ static void JNICALL ExceptionCatchCallback(jvmtiEnv *jvmti,
 }
 
 static void JNICALL ThreadStartCallback(jvmtiEnv *jvmti,
-                    JNIEnv *env,
-                    jthread thread) {
+                                        JNIEnv *env,
+                                        jthread thread) {
     enter_critical_section(jvmti);
     {
         /* It's possible we get here right after VmDeath event, be careful */
@@ -432,7 +413,7 @@ static void JNICALL ThreadStartCallback(jvmtiEnv *jvmti,
             char tname[MAX_THREAD_NAME_LENGTH];
 
             get_thread_name(jvmti, thread, tname, sizeof(tname));
-            stdout_message("ThreadStart %s\n", tname);
+            stdout_message("ThreadStart: %s\n", tname);
         }
     }
     exit_critical_section(jvmti);
@@ -440,8 +421,8 @@ static void JNICALL ThreadStartCallback(jvmtiEnv *jvmti,
 
 
 static void JNICALL ThreadEndCallback(jvmtiEnv *jvmti,
-                  JNIEnv *env,
-                  jthread thread) {
+                                      JNIEnv *env,
+                                      jthread thread) {
     enter_critical_section(jvmti);
     {
         /* It's possible we get here right after VmDeath event, be careful */
@@ -449,7 +430,7 @@ static void JNICALL ThreadEndCallback(jvmtiEnv *jvmti,
             char tname[MAX_THREAD_NAME_LENGTH];
 
             get_thread_name(jvmti, thread, tname, sizeof(tname));
-            stdout_message("ThreadEnd %s\n", tname);
+            stdout_message("ThreadEnd: %s\n", tname);
         }
     }
     exit_critical_section(jvmti);
@@ -457,10 +438,10 @@ static void JNICALL ThreadEndCallback(jvmtiEnv *jvmti,
 
 
 static void JNICALL ResourceExhaustedCallback(jvmtiEnv *jvmti,
-                          JNIEnv *env,
-                          jint flags,
-                          const void *reserved,
-                          const char *description) {
+                                              JNIEnv *env,
+                                              jint flags,
+                                              const void *reserved,
+                                              const char *description) {
     enter_critical_section(jvmti);
     {
         /* It's possible we get here right after VmDeath event, be careful */
@@ -482,6 +463,23 @@ static void JNICALL ResourceExhaustedCallback(jvmtiEnv *jvmti,
         }
     }
     exit_critical_section(jvmti);
+}
+
+string get_method_name(jvmtiEnv *jvmti, jmethodID method) {
+    char *name;
+    char *sig;
+    char *gsig;
+
+    jvmtiError error = jvmti->GetMethodName(method, &name, &sig, &gsig);
+    check_jvmti_error(jvmti, error, "Unable to get method information.");
+
+    std::stringstream stream;
+    stream << name << sig << " " << gsig;
+
+    deallocate(jvmti, name);
+    deallocate(jvmti, sig);
+    deallocate(jvmti, gsig);
+    return stream.str();
 }
 
 /* ------------------------------------------------------------------- */
@@ -514,17 +512,16 @@ void deallocate(jvmtiEnv *jvmti, void *ptr) {
 }
 
 /* Allocation of JVMTI managed memory */
-void * allocate(jvmtiEnv *jvmti, jint len) {
-    jvmtiError error;
+void *allocate(jvmtiEnv *jvmti, jint len) {
     void *ptr;
 
-    error = jvmti->Allocate(len, (unsigned char **) &ptr);
+    jvmtiError error = jvmti->Allocate(len, (unsigned char **) &ptr);
     check_jvmti_error(jvmti, error, "Cannot allocate memory");
     return ptr;
 }
 
 /* Get a name for a jthread */
-void static get_thread_name(jvmtiEnv *jvmti, jthread thread, char *tname, int maxlen) {
+static void get_thread_name(jvmtiEnv *jvmti, jthread thread, char *tname, int maxlen) {
     jvmtiThreadInfo info;
     jvmtiError error;
 
@@ -555,17 +552,13 @@ void static get_thread_name(jvmtiEnv *jvmti, jthread thread, char *tname, int ma
 
 /* Enter a critical section by doing a JVMTI Raw Monitor Enter */
 static void enter_critical_section(jvmtiEnv *jvmti) {
-    jvmtiError error;
-
-    error = jvmti->RawMonitorEnter(gdata->lock);
+    jvmtiError error = jvmti->RawMonitorEnter(gdata->lock);
     check_jvmti_error(jvmti, error, "Cannot enter with raw monitor");
 }
 
 /* Exit a critical section by doing a JVMTI Raw Monitor Exit */
 static void exit_critical_section(jvmtiEnv *jvmti) {
-    jvmtiError error;
-
-    error = jvmti->RawMonitorExit(gdata->lock);
+    jvmtiError error = jvmti->RawMonitorExit(gdata->lock);
     check_jvmti_error(jvmti, error, "Cannot exit with raw monitor");
 }
 
@@ -574,6 +567,15 @@ void stdout_message(const char *format, ...) {
 
     va_start(ap, format);
     (void) vfprintf(stdout, format, ap);
+    va_end(ap);
+}
+
+void stderr_message(const char *format, ...) {
+    va_list ap;
+
+    va_start(ap, format);
+    (void) vfprintf(stderr, format, ap);
+    (void) fflush(stderr);
     va_end(ap);
 }
 

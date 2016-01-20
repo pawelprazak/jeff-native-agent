@@ -6,6 +6,10 @@ compiler:
 #- gcc # the defualt gcc 4.6.x deos not support -std=c++11
 - clang
 
+before_install:
+- echo $LANG
+- echo $LC_ALL
+
 before_script:
 - mkdir build
 - cd build
@@ -22,10 +26,11 @@ branches:
   - master
 
 env:
+  global:
+    - LANG="en_US.UTF-8"
   matrix:
     - BUILD_TYPE=Debug
 #    - BUILD_TYPE=Release
 
 os:
-- linux
-#- osx
+  - linux

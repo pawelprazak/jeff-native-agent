@@ -17,6 +17,14 @@ if(NOT MSVC)
     add_definitions(-std=c++11)
 endif()
 
+if(WIN32)
+    set(CPACK_GENERATOR ZIP)
+else()
+    set(CPACK_GENERATOR TGZ)
+endif()
+
+include(CPack)
+
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
 if(WIN32)

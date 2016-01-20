@@ -171,11 +171,11 @@ jint init(JavaVM *jvm, char *options) {
     error = jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_METHOD_EXIT, (jthread) NULL);
     check_jvmti_error(jvmti, error, "Cannot set event notification");
 
-    error = jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_EXCEPTION, (jthread) NULL);
-    check_jvmti_error(jvmti, error, "Cannot set event notification");
+    //error = jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_EXCEPTION, (jthread) NULL);
+    //check_jvmti_error(jvmti, error, "Cannot set event notification");
 
-    error = jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_EXCEPTION_CATCH, (jthread) NULL);
-    check_jvmti_error(jvmti, error, "Cannot set event notification");
+    //error = jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_EXCEPTION_CATCH, (jthread) NULL);
+    //(jvmti, error, "Cannot set event notification");
 
     jvmtiEventCallbacks callbacks = jvmtiEventCallbacks();
 
@@ -218,6 +218,12 @@ jint live(jvmtiEnv *jvmti) {
     check_jvmti_error(jvmti, error, "Cannot set event notification");
 
     error = jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_RESOURCE_EXHAUSTED, (jthread) NULL);
+    check_jvmti_error(jvmti, error, "Cannot set event notification");
+    
+    error = jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_EXCEPTION, (jthread) NULL);
+    check_jvmti_error(jvmti, error, "Cannot set event notification");
+
+    error = jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_EXCEPTION_CATCH, (jthread) NULL);
     check_jvmti_error(jvmti, error, "Cannot set event notification");
 
     return JNI_OK;

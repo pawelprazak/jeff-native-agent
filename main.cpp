@@ -394,34 +394,34 @@ ExceptionCatchCallback(jvmtiEnv *jvmti,
     jni->DeleteLocalRef(exceptionClass);
 
     /* Stack trace */
-    int depth = 5;
-    jvmtiFrameInfo frames[depth];
-    jint count;
+    // int depth = 5;
+    // jvmtiFrameInfo frames[depth];
+    // jint count;
 
-    error = jvmti->GetStackTrace(thread, 0, depth, (jvmtiFrameInfo *) &frames, &count);
-    check_jvmti_error(jvmti, error, "Unable to get stack trace.");
+    // error = jvmti->GetStackTrace(thread, 0, depth, (jvmtiFrameInfo *) &frames, &count);
+    // check_jvmti_error(jvmti, error, "Unable to get stack trace.");
 
-    printf("Exception Stack Trace\n");
-    printf("=====================\n");
-    printf("Stack Trace Depth: %d\n", count);
+    // printf("Exception Stack Trace\n");
+    // printf("=====================\n");
+    // printf("Stack Trace Depth: %d\n", count);
 
-    char *methodName = "yet_to_call()";
-    char *declaringClassName;
-    jclass declaringClass;
+    // char *methodName = "yet_to_call()";
+    // char *declaringClassName;
+    // jclass declaringClass;
 
-    for (int i=0; i < count; i++) {
-        error = jvmti->GetMethodName(frames[i].method, &methodName, NULL, NULL);
+    // for (int i=0; i < count; i++) {
+    //     error = jvmti->GetMethodName(frames[i].method, &methodName, NULL, NULL);
 
-        if (error == JVMTI_ERROR_NONE) {
-            error = jvmti->GetMethodDeclaringClass(frames[i].method, &declaringClass);
-            error = jvmti->GetClassSignature(declaringClass, &declaringClassName, NULL);
+    //     if (error == JVMTI_ERROR_NONE) {
+    //         error = jvmti->GetMethodDeclaringClass(frames[i].method, &declaringClass);
+    //         error = jvmti->GetClassSignature(declaringClass, &declaringClassName, NULL);
 
-            if (error == JVMTI_ERROR_NONE) {
-                printf("at method %s() in class %s\n", methodName, declaringClassName);
-            }
-        }
-    }
-    printf("=====================\n");
+    //         if (error == JVMTI_ERROR_NONE) {
+    //             printf("at method %s() in class %s\n", methodName, declaringClassName);
+    //         }
+    //     }
+    // }
+    // printf("=====================\n");
 }
 
 static void JNICALL

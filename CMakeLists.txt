@@ -1,8 +1,23 @@
-cmake_minimum_required(VERSION 2.8)
+#-----------------------------------------------------------------------------
+#  CMake Config
+#-----------------------------------------------------------------------------
+
+cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
 
 project(jeff-native-agent)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+if(NOT MSVC)
+    if(NOT USE_CPP_VERSION)
+        set(USE_CPP_VERSION c++11)
+    endif()
+    message(STATUS "Use C++ version: ${USE_CPP_VERSION}")
+    # following only available from cmake 2.8.12:
+    #   add_compile_options(-std=${USE_CPP_VERSION})
+    # so using this instead:
+    add_definitions(-std=c++11)
+endif()
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
 if(WIN32)
     include_directories(

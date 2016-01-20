@@ -154,8 +154,7 @@ jint init(JavaVM *jvm, char *options) {
     error = jvmti->AddCapabilities(&capabilities);
     check_jvmti_error(jvmti, error, "Unable to get necessary JVMTI capabilities.");
 
-    /* Next we need to provide the pointers to the callback functions to this jvmti
-     */
+    /* Next we need to provide the pointers to the callback functions to this jvmti */
     error = jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_VM_START, (jthread) NULL);
     check_jvmti_error(jvmti, error, "Cannot set event notification");
 
@@ -164,18 +163,6 @@ jint init(JavaVM *jvm, char *options) {
 
     error = jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_VM_DEATH, (jthread) NULL);
     check_jvmti_error(jvmti, error, "Cannot set event notification");
-
-    error = jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_METHOD_ENTRY, (jthread) NULL);
-    check_jvmti_error(jvmti, error, "Cannot set event notification");
-
-    error = jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_METHOD_EXIT, (jthread) NULL);
-    check_jvmti_error(jvmti, error, "Cannot set event notification");
-
-    //error = jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_EXCEPTION, (jthread) NULL);
-    //check_jvmti_error(jvmti, error, "Cannot set event notification");
-
-    //error = jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_EXCEPTION_CATCH, (jthread) NULL);
-    //(jvmti, error, "Cannot set event notification");
 
     jvmtiEventCallbacks callbacks = jvmtiEventCallbacks();
 
@@ -211,6 +198,12 @@ jint init(JavaVM *jvm, char *options) {
 jint live(jvmtiEnv *jvmti) {
     jvmtiError error;
 
+    error = jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_METHOD_ENTRY, (jthread) NULL);
+    check_jvmti_error(jvmti, error, "Cannot set event notification");
+
+    error = jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_METHOD_EXIT, (jthread) NULL);
+    check_jvmti_error(jvmti, error, "Cannot set event notification");
+
     error = jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_THREAD_START, (jthread) NULL);
     check_jvmti_error(jvmti, error, "Cannot set event notification");
 
@@ -230,8 +223,7 @@ jint live(jvmtiEnv *jvmti) {
 }
 
 /* Callback for JVMTI_EVENT_VM_START */
-static void JNICALL
-VMStartCallback(jvmtiEnv *jvmti, JNIEnv *env) {
+static void JNICALL VMStartCallback(jvmtiEnv *jvmti, JNIEnv *env) {
     enter_critical_section(jvmti);
     {
         /* The VM has started. */
@@ -244,8 +236,7 @@ VMStartCallback(jvmtiEnv *jvmti, JNIEnv *env) {
 }
 
 /* Callback for JVMTI_EVENT_VM_INIT */
-static void JNICALL
-VMInitCallback(jvmtiEnv *jvmti, JNIEnv *env, jthread thread) {
+static void JNICALL VMInitCallback(jvmtiEnv *jvmti, JNIEnv *env, jthread thread) {
     enter_critical_section(jvmti);
     {
         char tname[MAX_THREAD_NAME_LENGTH];
@@ -264,8 +255,7 @@ VMInitCallback(jvmtiEnv *jvmti, JNIEnv *env, jthread thread) {
 }
 
 /* Callback for JVMTI_EVENT_VM_DEATH */
-static void JNICALL
-VMDeathCallback(jvmtiEnv *jvmti, JNIEnv *env) {
+static void JNICALL VMDeathCallback(jvmtiEnv *jvmti, JNIEnv *env) {
     enter_critical_section(jvmti);
     {
         /* The VM has died. */
@@ -288,8 +278,7 @@ VMDeathCallback(jvmtiEnv *jvmti, JNIEnv *env) {
     exit_critical_section(jvmti);
 }
 
-static void JNICALL
-MethodEntryCallback(jvmtiEnv *jvmti,
+static void JNICALL MethodEntryCallback(jvmtiEnv *jvmti,
                     JNIEnv *jni,
                     jthread thread,
                     jmethodID method) {
@@ -302,8 +291,7 @@ MethodEntryCallback(jvmtiEnv *jvmti,
     printf("Enter Method:%s%s\n", name, sig);
 }
 
-static void JNICALL
-MethodExitCallback(jvmtiEnv *jvmti,
+static void JNICALL MethodExitCallback(jvmtiEnv *jvmti,
                    JNIEnv *jni,
                    jthread thread,
                    jmethodID method,
@@ -318,8 +306,7 @@ MethodExitCallback(jvmtiEnv *jvmti,
     printf("Exit Method:%s%s\n", name, sig);
 }
 
-static void JNICALL
-ExceptionCallback(jvmtiEnv *jvmti,
+static void JNICALL ExceptionCallback(jvmtiEnv *jvmti,
                   JNIEnv *jni,
                   jthread thread,
                   jmethodID method,
@@ -360,8 +347,7 @@ ExceptionCallback(jvmtiEnv *jvmti,
     jni->DeleteLocalRef(exceptionClass);
 };
 
-static void JNICALL
-ExceptionCatchCallback(jvmtiEnv *jvmti,
+static void JNICALL ExceptionCatchCallback(jvmtiEnv *jvmti,
                        JNIEnv *jni,
                        jthread thread,
                        jmethodID method,
@@ -430,8 +416,7 @@ ExceptionCatchCallback(jvmtiEnv *jvmti,
     printf("=====================\n");
 }
 
-static void JNICALL
-ThreadStartCallback(jvmtiEnv *jvmti,
+static void JNICALL ThreadStartCallback(jvmtiEnv *jvmti,
                     JNIEnv *env,
                     jthread thread) {
     enter_critical_section(jvmti);
@@ -448,8 +433,7 @@ ThreadStartCallback(jvmtiEnv *jvmti,
 }
 
 
-static void JNICALL
-ThreadEndCallback(jvmtiEnv *jvmti,
+static void JNICALL ThreadEndCallback(jvmtiEnv *jvmti,
                   JNIEnv *env,
                   jthread thread) {
     enter_critical_section(jvmti);
@@ -466,8 +450,7 @@ ThreadEndCallback(jvmtiEnv *jvmti,
 }
 
 
-static void JNICALL
-ResourceExhaustedCallback(jvmtiEnv *jvmti,
+static void JNICALL ResourceExhaustedCallback(jvmtiEnv *jvmti,
                           JNIEnv *env,
                           jint flags,
                           const void *reserved,
@@ -503,8 +486,7 @@ ResourceExhaustedCallback(jvmtiEnv *jvmti,
  *   The interface GetErrorName() returns the actual enumeration constant
  *   name, making the error messages much easier to understand.
  */
-void
-check_jvmti_error(jvmtiEnv *jvmti, jvmtiError errnum, const char *str) {
+void check_jvmti_error(jvmtiEnv *jvmti, jvmtiError errnum, const char *str) {
     if (errnum != JVMTI_ERROR_NONE) {
         char *errnum_str = NULL;
         jvmti->GetErrorName(errnum, &errnum_str);
@@ -518,8 +500,7 @@ check_jvmti_error(jvmtiEnv *jvmti, jvmtiError errnum, const char *str) {
 /* All memory allocated by JVMTI must be freed by the JVMTI Deallocate
  *   interface.
  */
-void
-deallocate(jvmtiEnv *jvmti, void *ptr) {
+void deallocate(jvmtiEnv *jvmti, void *ptr) {
     jvmtiError error;
 
     error = jvmti->Deallocate((unsigned char *) ptr);
@@ -527,8 +508,7 @@ deallocate(jvmtiEnv *jvmti, void *ptr) {
 }
 
 /* Allocation of JVMTI managed memory */
-void *
-allocate(jvmtiEnv *jvmti, jint len) {
+void * allocate(jvmtiEnv *jvmti, jint len) {
     jvmtiError error;
     void *ptr;
 
@@ -538,8 +518,7 @@ allocate(jvmtiEnv *jvmti, jint len) {
 }
 
 /* Get a name for a jthread */
-void
-static get_thread_name(jvmtiEnv *jvmti, jthread thread, char *tname, int maxlen) {
+void static get_thread_name(jvmtiEnv *jvmti, jthread thread, char *tname, int maxlen) {
     jvmtiThreadInfo info;
     jvmtiError error;
 
@@ -569,8 +548,7 @@ static get_thread_name(jvmtiEnv *jvmti, jthread thread, char *tname, int maxlen)
 }
 
 /* Enter a critical section by doing a JVMTI Raw Monitor Enter */
-static void
-enter_critical_section(jvmtiEnv *jvmti) {
+static void enter_critical_section(jvmtiEnv *jvmti) {
     jvmtiError error;
 
     error = jvmti->RawMonitorEnter(gdata->lock);
@@ -578,16 +556,14 @@ enter_critical_section(jvmtiEnv *jvmti) {
 }
 
 /* Exit a critical section by doing a JVMTI Raw Monitor Exit */
-static void
-exit_critical_section(jvmtiEnv *jvmti) {
+static void exit_critical_section(jvmtiEnv *jvmti) {
     jvmtiError error;
 
     error = jvmti->RawMonitorExit(gdata->lock);
     check_jvmti_error(jvmti, error, "Cannot exit with raw monitor");
 }
 
-void
-stdout_message(const char *format, ...) {
+void stdout_message(const char *format, ...) {
     va_list ap;
 
     va_start(ap, format);
@@ -595,8 +571,7 @@ stdout_message(const char *format, ...) {
     va_end(ap);
 }
 
-void
-fatal_error(const char *format, ...) {
+void fatal_error(const char *format, ...) {
     va_list ap;
 
     va_start(ap, format);

@@ -313,14 +313,22 @@ static void JNICALL ExceptionCallback(jvmtiEnv *jvmti,
     stdout_message("Uncought exception in Method: %s\n", methodName.c_str());
 
     // Get the exception class
-    jclass exceptionClass = jni->GetObjectClass(exception);
+    jclass exceptionType = jni->GetObjectClass(exception);
 
     // Get the class object's class descriptor
-    jclass classType = jni->GetObjectClass(exceptionClass);
+    jclass classType = jni->GetObjectClass(exceptionType);
+
+    char *exceptionSignature;
+    jvmtiError error = jvmti->GetClassSignature(exceptionType, &exceptionSignature, NULL);
+    check_jvmti_error(jvmti, error, "Unable to get class signature.");
+
+    printf("Exception signature:%s\n", exceptionSignature);
+
+    deallocate(jvmti, exceptionSignature);
 
     // Find the getSimpleName() method in the class object
     jmethodID methodId = jni->GetMethodID(classType, "getSimpleName", "()Ljava/lang/String;");
-    jstring className = (jstring) jni->CallObjectMethod(exceptionClass, methodId);
+    jstring className = (jstring) jni->CallObjectMethod(exceptionType, methodId);
 
     // Convert to native string
     const char *nativeString = jni->GetStringUTFChars(className, 0);
@@ -331,7 +339,7 @@ static void JNICALL ExceptionCallback(jvmtiEnv *jvmti,
     // And finally, release the JNI objects after usage
     jni->ReleaseStringUTFChars(className, nativeString);
     jni->DeleteLocalRef(classType);
-    jni->DeleteLocalRef(exceptionClass);
+    jni->DeleteLocalRef(exceptionType);
 };
 
 static void JNICALL ExceptionCatchCallback(jvmtiEnv *jvmti,
@@ -352,10 +360,12 @@ static void JNICALL ExceptionCatchCallback(jvmtiEnv *jvmti,
     jclass classType = jni->GetObjectClass(exceptionType);
 
     char *exceptionSignature;
-    jvmtiError error = jvmti->GetClassSignature(classType, &exceptionSignature, NULL);
+    jvmtiError error = jvmti->GetClassSignature(exceptionType, &exceptionSignature, NULL);
     check_jvmti_error(jvmti, error, "Unable to get class signature.");
 
     printf("Exception signature:%s\n", exceptionSignature);
+
+    deallocate(jvmti, exceptionSignature);
 
     // Find the getSimpleName() method in the class object
     jmethodID methodId = jni->GetMethodID(classType, "getSimpleName", "()Ljava/lang/String;");
@@ -466,19 +476,29 @@ static void JNICALL ResourceExhaustedCallback(jvmtiEnv *jvmti,
 }
 
 string get_method_name(jvmtiEnv *jvmti, jmethodID method) {
+    jvmtiError error;
+
+    jclass declaringType;
+    error = jvmti->GetMethodDeclaringClass(method, &declaringType);
+    check_jvmti_error(jvmti, error, "Unable to get method information.");
+
+    char *type;
+    error = jvmti->GetClassSignature(declaringType, &type, NULL);
+    check_jvmti_error(jvmti, error, "Unable to get class signature.");
+
     char *name;
     char *sig;
     char *gsig;
-
-    jvmtiError error = jvmti->GetMethodName(method, &name, &sig, &gsig);
+    error = jvmti->GetMethodName(method, &name, &sig, &gsig);
     check_jvmti_error(jvmti, error, "Unable to get method information.");
 
     std::stringstream stream;
-    stream << name << sig << " " << gsig;
+    stream << type << "#" << name << sig << " " << gsig;
 
-    deallocate(jvmti, name);
-    deallocate(jvmti, sig);
     deallocate(jvmti, gsig);
+    deallocate(jvmti, sig);
+    deallocate(jvmti, name);
+    deallocate(jvmti, type);
     return stream.str();
 }
 

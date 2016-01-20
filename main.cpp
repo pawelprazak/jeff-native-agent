@@ -378,6 +378,12 @@ ExceptionCatchCallback(jvmtiEnv *jvmti,
     // Get the class object's class descriptor
     jclass classType = jni->GetObjectClass(exceptionClass);
 
+    char *exceptionSignature;
+    error = jvmti->GetClassSignature(classType, &exceptionSignature, NULL);
+    check_jvmti_error(jvmti, error, "Unable to get class signature.");
+
+    printf("Exception signature:%s\n", exceptionSignature);
+
     // Find the getSimpleName() method in the class object
     jmethodID methodId = jni->GetMethodID(classType, "getSimpleName", "()Ljava/lang/String;");
     jstring className = (jstring) jni->CallObjectMethod(exceptionClass, methodId);

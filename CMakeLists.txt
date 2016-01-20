@@ -14,7 +14,7 @@ if(NOT MSVC)
     # following only available from cmake 2.8.12:
     #   add_compile_options(-std=${USE_CPP_VERSION})
     # so using this instead:
-    add_definitions(-std=c++11)
+    add_definitions(-std=${USE_CPP_VERSION})
 endif()
 
 if(WIN32)

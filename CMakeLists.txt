@@ -6,10 +6,10 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
 if(WIN32)
     include_directories(
-        "C:\Program Files\Java\jdk1.8.0_51\include"
-        "C:\Program Files\Java\jdk1.8.0_51\include\win32"
-        "C:\Program Files\Java\jdk1.8.0\include"
-        "C:\Program Files\Java\jdk1.8.0\include\win32"
+        "C:/Program Files/Java/jdk1.8.0_51/include"
+        "C:/Program Files/Java/jdk1.8.0_51/include/win32"
+        "C:/Program Files/Java/jdk1.8.0/include"
+        "C:/Program Files/Java/jdk1.8.0/include/win32"
     )
 else()
     include_directories(

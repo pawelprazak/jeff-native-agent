@@ -35,4 +35,5 @@ Desktop.ini
 .DS_Store
 .Trashes
 
+# Maven
 target/

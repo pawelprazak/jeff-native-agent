@@ -1,10 +1,10 @@
 #-----------------------------------------------------------------------------
 #  CMake Config
 #
-#  https://cmake.org/cmake/help/v2.8.12/cmake.html
+#  https://cmake.org/cmake/help/v2.8.7/cmake.html
 #-----------------------------------------------------------------------------
 
-cmake_minimum_required(VERSION 2.8.12 FATAL_ERROR)
+cmake_minimum_required(VERSION 2.8.7 FATAL_ERROR)
 
 project(jeff-native-agent)
 
@@ -24,7 +24,10 @@ if(NOT MSVC)
         set(USE_CPP_VERSION c++11)
     endif()
     message(STATUS "Use C++ version: ${USE_CPP_VERSION}")
-    add_compile_options(-std=${USE_CPP_VERSION})
+    # following only available from cmake 2.8.12:
+    #   add_compile_options(-std=${USE_CPP_VERSION})
+    # so using this instead:
+    add_definitions(-std=${USE_CPP_VERSION})
 endif()
 
 if(WIN32)
@@ -45,7 +48,10 @@ endif()
 
 # Build
 
-set(SOURCE_FILES main.cpp)
+set(SOURCE_FILES 
+    src/main.hpp
+    src/main.cpp
+)
 add_library(jeff-native-agent SHARED ${SOURCE_FILES})
 
 # Packaging

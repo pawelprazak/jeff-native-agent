@@ -1,5 +1,7 @@
 #-----------------------------------------------------------------------------
 #  CMake Config
+#
+#  https://cmake.org/cmake/help/v2.8.12/cmake.html
 #-----------------------------------------------------------------------------
 
 cmake_minimum_required(VERSION 2.8.12 FATAL_ERROR)
@@ -16,6 +18,14 @@ set(LIB_VERSION_STRING "${LIB_MAJOR_VERSION}.${LIB_MINOR_VERSION}.${LIB_PATCH_VE
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+
+if(NOT MSVC)
+    if(NOT USE_CPP_VERSION)
+        set(USE_CPP_VERSION c++11)
+    endif()
+    message(STATUS "Use C++ version: ${USE_CPP_VERSION}")
+    add_compile_options(-std=${USE_CPP_VERSION})
+endif()
 
 if(WIN32)
     include_directories(
@@ -38,12 +48,6 @@ endif()
 set(SOURCE_FILES main.cpp)
 add_library(jeff-native-agent SHARED ${SOURCE_FILES})
 
-target_compile_features(jeff-native-agent PRIVATE 
-    cxx_auto_type 
-    cxx_nullptr
-    cxx_variadic_templates
-)
-
 # Packaging
 
 set(CPACK_PACKAGE_VERSION_MAJOR ${LIBOSMIUM_VERSION_MAJOR})
@@ -54,7 +58,6 @@ set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "JVM TI native agent")
 set(CPACK_PACKAGE_VENDOR "bluecatcode.com")
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/LICENSE")
 set(CPACK_PACKAGE_NAME ${CMAKE_PROJECT_NAME})
-#set(CPACK_PACKAGE_FILE_NAME ${CMAKE_PROJECT_NAME}-${CPACK_PACKAGE_VERSION_MAJOR}_${CPACK_PACKAGE_VERSION_MINOR}_${CPACK_PACKAGE_VERSION_PATCH}-${PLATFORM}-${ARCH})
 
 if(WIN32)
     set(CPACK_GENERATOR ZIP)

@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
 
 mkdir -p build && \
-    (cd build && cmake .. && make clean && make && cpack)
+    (cd build && cmake .. && make clean && make)

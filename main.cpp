@@ -487,7 +487,7 @@ string get_method_name(jvmtiEnv *jvmti, jmethodID method) {
     check_jvmti_error(jvmti, error, "Unable to get method information.");
 
     std::stringstream stream;
-    stream << type << "#" << name << gsig == NULL ? sig : gsig;
+    stream << type << "#" << name << (gsig == NULL) ? sig : gsig;
 
     deallocate(jvmti, gsig);
     deallocate(jvmti, sig);
@@ -502,7 +502,7 @@ string get_thread_name(jvmtiEnv *jvmti, JNIEnv *jni, jthread thread) {
     jvmtiThreadInfo info;
     jvmtiError error;
 
-    /* Make sure the stack variables are garbage free */
+    /* Make sure the stack variable is garbage free */
     (void) memset(&info, 0, sizeof(info));
 
     /* Get the thread information, which includes the name */

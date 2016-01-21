@@ -1,3 +1,5 @@
+#ifndef JEFF_MAIN_H
+#define JEFF_MAIN_H
 
 #include "jvmti.h"
 
@@ -69,3 +71,11 @@ static void JNICALL ThreadEndCallback(jvmtiEnv *jvmti, JNIEnv *env, jthread thre
 
 static void JNICALL ResourceExhaustedCallback(jvmtiEnv *jvmti, JNIEnv *env, jint flags,
                                               const void *reserved, const char *description);
+                                              
+/* Generic JVMTI utility functions */
+
+static void enter_critical_section(jvmtiEnv *jvmti);
+
+static void exit_critical_section(jvmtiEnv *jvmti);
+
+#endif // JEFF_MAIN_H

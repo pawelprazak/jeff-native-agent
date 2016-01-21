@@ -16,8 +16,9 @@ set(LIB_VERSION_STRING "${LIB_MAJOR_VERSION}.${LIB_MINOR_VERSION}.${LIB_PATCH_VE
 #  Compiler and Linker flags
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+SET(CMAKE_COLOR_MAKEFILE ON)
+set(CMAKE_VERBOSE_MAKEFILE OFF)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-long-long -pedantic")
 
 if(NOT MSVC)
     if(NOT USE_CPP_VERSION)
@@ -51,6 +52,12 @@ endif()
 set(SOURCE_FILES 
     src/main.hpp
     src/main.cpp
+    src/common.hpp
+    src/common.cpp
+    src/jvmti.hpp
+    src/jvmti.cpp
+    src/message.hpp
+    src/message.cpp
 )
 add_library(jeff-native-agent SHARED ${SOURCE_FILES})
 

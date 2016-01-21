@@ -2,54 +2,28 @@
  * see: https://docs.oracle.com/javase/8/docs/platform/jvmti/jvmti.html
  */
 
-#include <limits>
-#include <iostream>
-#include <sstream>
-#include <vector>
-#include <memory>
-#include <cstdarg>
-#include <ctime>
-#include "string.h"
-
 #include "main.hpp"
+#include "common.hpp"
+#include "message.hpp"
+#include "jvmti.hpp"
 
 using namespace std;
-
-std::string get_method_name(jvmtiEnv *jvmti, jmethodID method);
-
-std::string get_thread_name(jvmtiEnv *jvmti, JNIEnv *env, jthread thread);
-
-void *allocate(jvmtiEnv *jvmti, jint len);
-
-void deallocate(jvmtiEnv *jvmti, void *ptr);
-
-void check_jvmti_error(jvmtiEnv *jvmti, jvmtiError errnum, const char *str);
-
-void fatal_error(const char *format, ...);
-
-void stderr_message(const char *format, ...);
-
-void stdout_message(const char *format, ...);
-
-static void enter_critical_section(jvmtiEnv *jvmti);
-
-static void exit_critical_section(jvmtiEnv *jvmti);
 
 JNIEXPORT jint JNICALL
 Agent_OnLoad(JavaVM *jvm, char *options, void *reserved) {
     return init(jvm, options);
-};
+}
 
 JNIEXPORT jint JNICALL
 Agent_OnAttach(JavaVM *jvm, char *options, void *reserved) {
     return init(jvm, options);
-};
+}
 
 JNIEXPORT void JNICALL
 Agent_OnUnload(JavaVM *jvm) {
     /* Make sure all allocated space is freed */
     delete (gdata);
-};
+}
 
 jint init(JavaVM *jvm, char *options) {
     jvmtiEnv *jvmti;
@@ -172,8 +146,6 @@ void JNICALL VMStartCallback(jvmtiEnv *jvmti, JNIEnv *env) {
 void JNICALL VMInitCallback(jvmtiEnv *jvmti, JNIEnv *env, jthread thread) {
     enter_critical_section(jvmti);
     {
-        char tname[1024];
-
         /* The VM has started. */
         string threadName = get_thread_name(jvmti, env, thread);
         stdout_message("VMInit %s\n", threadName.c_str());
@@ -270,7 +242,7 @@ void JNICALL ExceptionCallback(jvmtiEnv *jvmti,
     jni->ReleaseStringUTFChars(className, nativeString);
     jni->DeleteLocalRef(classType);
     jni->DeleteLocalRef(exceptionType);
-};
+}
 
 void JNICALL ExceptionCatchCallback(jvmtiEnv *jvmti,
                                            JNIEnv *jni,
@@ -401,103 +373,8 @@ void JNICALL ResourceExhaustedCallback(jvmtiEnv *jvmti,
     exit_critical_section(jvmti);
 }
 
-/* Get a name for a jmethodID */
-string get_method_name(jvmtiEnv *jvmti, jmethodID method) {
-    jvmtiError error;
-
-    jclass declaringType;
-    error = jvmti->GetMethodDeclaringClass(method, &declaringType);
-    check_jvmti_error(jvmti, error, "Unable to get method information.");
-
-    char *type;
-    error = jvmti->GetClassSignature(declaringType, &type, NULL);
-    check_jvmti_error(jvmti, error, "Unable to get class signature.");
-
-    char *name;
-    char *sig;
-    char *gsig;
-    error = jvmti->GetMethodName(method, &name, &sig, &gsig);
-    check_jvmti_error(jvmti, error, "Unable to get method information.");
-
-    std::stringstream stream;
-    stream << type << "#" << name << (gsig == NULL) ? sig : gsig;
-
-    deallocate(jvmti, gsig);
-    deallocate(jvmti, sig);
-    deallocate(jvmti, name);
-    deallocate(jvmti, type);
-    
-    return stream.str();
-}
-
-/* Get a name for a jthread */
-string get_thread_name(jvmtiEnv *jvmti, JNIEnv *jni, jthread thread) {
-    jvmtiThreadInfo info;
-    jvmtiError error;
-
-    /* Make sure the stack variable is garbage free */
-    (void) memset(&info, 0, sizeof(info));
-
-    /* Get the thread information, which includes the name */
-    error = jvmti->GetThreadInfo(thread, &info);
-    check_jvmti_error(jvmti, error, "Cannot get thread info");
-
-    std::stringstream stream;
-
-    /* The thread might not have a name, be careful here. */
-    if (info.name != NULL) {
-        stream << info.name;
-
-        /* Every string allocated by JVMTI needs to be freed */
-        deallocate(jvmti, (void *) info.name);
-    } else {
-        stream << "Unknown";
-    }
-    
-    /* Cleanup JNI references */
-    jni->DeleteLocalRef(info.thread_group);
-    jni->DeleteLocalRef(info.context_class_loader);
-    
-    return stream.str();
-}
-
 /* ------------------------------------------------------------------- */
 /* Generic JVMTI utility functions */
-
-/* Every JVMTI interface returns an error code, which should be checked
- *   to avoid any cascading errors down the line.
- *   The interface GetErrorName() returns the actual enumeration constant
- *   name, making the error messages much easier to understand.
- */
-void check_jvmti_error(jvmtiEnv *jvmti, jvmtiError errnum, const char *str) {
-    if (errnum != JVMTI_ERROR_NONE) {
-        char *errnum_str = NULL;
-        jvmti->GetErrorName(errnum, &errnum_str);
-
-        fatal_error("ERROR: JVMTI: %d(%s): %s\n", errnum,
-                    (errnum_str == NULL ? "Unknown" : errnum_str),
-                    (str == NULL ? "" : str));
-    }
-}
-
-/* All memory allocated by JVMTI must be freed by the JVMTI Deallocate
- *   interface.
- */
-void deallocate(jvmtiEnv *jvmti, void *ptr) {
-    jvmtiError error;
-
-    error = jvmti->Deallocate((unsigned char *) ptr);
-    check_jvmti_error(jvmti, error, "Cannot deallocate memory");
-}
-
-/* Allocation of JVMTI managed memory */
-void *allocate(jvmtiEnv *jvmti, jint len) {
-    void *ptr;
-
-    jvmtiError error = jvmti->Allocate(len, (unsigned char **) &ptr);
-    check_jvmti_error(jvmti, error, "Cannot allocate memory");
-    return ptr;
-}
 
 /* Enter a critical section by doing a JVMTI Raw Monitor Enter */
 void enter_critical_section(jvmtiEnv *jvmti) {
@@ -509,31 +386,4 @@ void enter_critical_section(jvmtiEnv *jvmti) {
 void exit_critical_section(jvmtiEnv *jvmti) {
     jvmtiError error = jvmti->RawMonitorExit(gdata->lock);
     check_jvmti_error(jvmti, error, "Cannot exit with raw monitor");
-}
-
-void stdout_message(const char *format, ...) {
-    va_list ap;
-
-    va_start(ap, format);
-    (void) vfprintf(stdout, format, ap);
-    va_end(ap);
-}
-
-void stderr_message(const char *format, ...) {
-    va_list ap;
-
-    va_start(ap, format);
-    (void) vfprintf(stderr, format, ap);
-    (void) fflush(stderr);
-    va_end(ap);
-}
-
-void fatal_error(const char *format, ...) {
-    va_list ap;
-
-    va_start(ap, format);
-    (void) vfprintf(stderr, format, ap);
-    (void) fflush(stderr);
-    va_end(ap);
-    exit(3);
-}
+}                                              

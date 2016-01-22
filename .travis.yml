@@ -1,4 +1,4 @@
-sudo: false
+sudo: true
 
 language: cpp
 
@@ -11,9 +11,11 @@ before_install:
 - echo $LC_ALL
 
 before_script:
-- mkdir build
-- cd build
-- cmake ..
+  - sudo apt-get update -qq
+  - sudo apt-get install libboost-all-dev
+  - mkdir build
+  - cd build
+  - cmake ..
 
 script:
   - make

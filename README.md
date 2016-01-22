@@ -3,6 +3,10 @@
 [![Build Status](https://travis-ci.org/pawelprazak/jeff-native-agent.svg?branch=master)](https://travis-ci.org/pawelprazak/jeff-native-agent)
 [![Build status](https://ci.appveyor.com/api/projects/status/8sjmq6gs13c44lgp?svg=true)](https://ci.appveyor.com/project/pawelprazak/jeff-native-agent)
 
+## Dependencies
+
+    sudo apt-get install libboost-all-dev
+
 ## Building
 
 Jeff uses cmake:
@@ -14,7 +18,7 @@ Jeff uses cmake:
 
 ## Basic scripts
 
-    ./build.sh && ./hello.sh
+    ./build.sh && ./hello.sh > agent.log
 
 ## Dependecies
 

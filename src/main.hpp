@@ -1,5 +1,5 @@
-#ifndef JEFF_MAIN_H
-#define JEFF_MAIN_H
+#ifndef JEFF_NATIVE_AGENT_MAIN_H
+#define JEFF_NATIVE_AGENT_MAIN_H
 
 #include "jvmti.h"
 
@@ -41,7 +41,7 @@ Agent_OnUnload(JavaVM *jvm);
  
 static jint init(JavaVM *jvm, char *options);
 
-static jint live(jvmtiEnv *jvmti);
+static jint live(jvmtiEnv &jvmti);
 
 /**
  * JVMTI calback functions
@@ -67,7 +67,7 @@ static void JNICALL ExceptionCatchCallback(jvmtiEnv *jvmti, JNIEnv *jni, jthread
 
 static void JNICALL ThreadStartCallback(jvmtiEnv *jvmti, JNIEnv *env, jthread thread);
 
-static void JNICALL ThreadEndCallback(jvmtiEnv *jvmti, JNIEnv *env, jthread thread);
+static void JNICALL ThreadEndCallback(jvmtiEnv *jvmti, JNIEnv *jni, jthread thread);
 
 static void JNICALL ResourceExhaustedCallback(jvmtiEnv *jvmti, JNIEnv *env, jint flags,
                                               const void *reserved, const char *description);
@@ -78,4 +78,4 @@ static void enter_critical_section(jvmtiEnv *jvmti);
 
 static void exit_critical_section(jvmtiEnv *jvmti);
 
-#endif // JEFF_MAIN_H
+#endif // JEFF_NATIVE_AGENT_MAIN_H

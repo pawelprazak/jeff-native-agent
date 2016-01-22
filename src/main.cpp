@@ -3,9 +3,11 @@
  */
 
 #include "main.hpp"
-#include "common.hpp"
-#include "message.hpp"
 #include "jvmti.hpp"
+#include "Object.hpp"
+#include "Type.hpp"
+#include "jni.hpp"
+#include <boost/fusion/include/transform.hpp>
 
 using namespace std;
 
@@ -32,10 +34,9 @@ jint init(JavaVM *jvm, char *options) {
         /* This means that the VM was unable to obtain this version of the
          *   JVMTI interface, this is a fatal error.
          */
-        stderr_message("ERROR: Unable to access JVMTI Version 1.2 (0x%x),"
-                               " is your JDK a 6.0 or newer version?"
-                               " JNIEnv's GetEnv() returned %d\n",
-                       JVMTI_VERSION_1_2, result);
+        std::cerr << boost::format("ERROR: Unable to access JVMTI Version 1.2 (0x%x),"
+                                           " is your JDK a 6.0 or newer version?"
+                                           " JNIEnv's GetEnv() returned %d\n") % JVMTI_VERSION_1_2 % result;
         return JNI_ERR;
     }
 
@@ -59,17 +60,17 @@ jint init(JavaVM *jvm, char *options) {
     jvmtiError error;
 
     error = jvmti->AddCapabilities(&capabilities);
-    check_jvmti_error(jvmti, error, "Unable to get necessary JVMTI capabilities.");
+    check_jvmti_error(*jvmti, error, "Unable to get necessary JVMTI capabilities.");
 
     /* Next we need to provide the pointers to the callback functions to this jvmti */
     error = jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_VM_START, (jthread) NULL);
-    check_jvmti_error(jvmti, error, "Cannot set event notification");
+    check_jvmti_error(*jvmti, error, "Cannot set event notification");
 
     error = jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_VM_INIT, (jthread) NULL);
-    check_jvmti_error(jvmti, error, "Cannot set event notification");
+    check_jvmti_error(*jvmti, error, "Cannot set event notification");
 
     error = jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_VM_DEATH, (jthread) NULL);
-    check_jvmti_error(jvmti, error, "Cannot set event notification");
+    check_jvmti_error(*jvmti, error, "Cannot set event notification");
 
     jvmtiEventCallbacks callbacks = jvmtiEventCallbacks();
 
@@ -92,38 +93,38 @@ jint init(JavaVM *jvm, char *options) {
     callbacks.ResourceExhausted = &ResourceExhaustedCallback; /* JVMTI_EVENT_RESOURCE_EXHAUSTED */
 
     error = jvmti->SetEventCallbacks(&callbacks, (jint) sizeof(callbacks));
-    check_jvmti_error(jvmti, error, "Cannot set jvmti callbacks");
+    check_jvmti_error(*jvmti, error, "Cannot set jvmti callbacks");
 
     /* Here we create a raw monitor for our use in this agent to protect critical sections of code.
      */
     error = jvmti->CreateRawMonitor("agent data", &(gdata->lock));
-    check_jvmti_error(jvmti, error, "Cannot create raw monitor");
+    check_jvmti_error(*jvmti, error, "Cannot create raw monitor");
 
     return JNI_OK;
 }
 
-jint live(jvmtiEnv *jvmti) {
+jint live(jvmtiEnv &jvmti) {
     jvmtiError error;
 
-    error = jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_METHOD_ENTRY, (jthread) NULL);
+    error = jvmti.SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_METHOD_ENTRY, (jthread) NULL);
     check_jvmti_error(jvmti, error, "Cannot set event notification");
 
-    error = jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_METHOD_EXIT, (jthread) NULL);
+    error = jvmti.SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_METHOD_EXIT, (jthread) NULL);
     check_jvmti_error(jvmti, error, "Cannot set event notification");
 
-    error = jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_THREAD_START, (jthread) NULL);
+    error = jvmti.SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_THREAD_START, (jthread) NULL);
     check_jvmti_error(jvmti, error, "Cannot set event notification");
 
-    error = jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_THREAD_END, (jthread) NULL);
+    error = jvmti.SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_THREAD_END, (jthread) NULL);
     check_jvmti_error(jvmti, error, "Cannot set event notification");
 
-    error = jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_RESOURCE_EXHAUSTED, (jthread) NULL);
+    error = jvmti.SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_RESOURCE_EXHAUSTED, (jthread) NULL);
     check_jvmti_error(jvmti, error, "Cannot set event notification");
 
-    error = jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_EXCEPTION, (jthread) NULL);
+    error = jvmti.SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_EXCEPTION, (jthread) NULL);
     check_jvmti_error(jvmti, error, "Cannot set event notification");
 
-    error = jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_EXCEPTION_CATCH, (jthread) NULL);
+    error = jvmti.SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_EXCEPTION_CATCH, (jthread) NULL);
     check_jvmti_error(jvmti, error, "Cannot set event notification");
 
     return JNI_OK;
@@ -134,7 +135,7 @@ void JNICALL VMStartCallback(jvmtiEnv *jvmti, JNIEnv *env) {
     enter_critical_section(jvmti);
     {
         /* The VM has started. */
-        stdout_message("VMStart\n");
+        std::cout << "VMStart\n";
 
         /* Indicate VM has started */
         gdata->vm_is_started = JNI_TRUE;
@@ -147,14 +148,14 @@ void JNICALL VMInitCallback(jvmtiEnv *jvmti, JNIEnv *env, jthread thread) {
     enter_critical_section(jvmti);
     {
         /* The VM has started. */
-        string threadName = get_thread_name(jvmti, env, thread);
-        stdout_message("VMInit %s\n", threadName.c_str());
+        string threadName = get_thread_name(*jvmti, *env, thread);
+        std::cout << boost::format("VMInit %s\n") % threadName;
 
         /* Indicate VM has initialized */
         gdata->vm_is_initialized = JNI_TRUE;
 
         /* The VM is now initialized, at this time we make our requests for additional events. */
-        live(jvmti);
+        live(*jvmti);
     }
     exit_critical_section(jvmti);
 }
@@ -164,7 +165,7 @@ void JNICALL VMDeathCallback(jvmtiEnv *jvmti, JNIEnv *env) {
     enter_critical_section(jvmti);
     {
         /* The VM has died. */
-        stdout_message("VMDeath\n");
+        std::cout << "VMDeath\n";
 
         /* The critical section here is important to hold back the VM death
          *    until all other callbacks have completed.
@@ -184,105 +185,62 @@ void JNICALL VMDeathCallback(jvmtiEnv *jvmti, JNIEnv *env) {
 }
 
 void JNICALL MethodEntryCallback(jvmtiEnv *jvmti,
-                                        JNIEnv *jni,
-                                        jthread thread,
-                                        jmethodID method) {
-    string methodName = get_method_name(jvmti, method);
-    stdout_message("Enter Method: %s\n", methodName.c_str());
+                                 JNIEnv *jni,
+                                 jthread thread,
+                                 jmethodID method) {
+    string methodName = get_method_name(*jvmti, method);
+    std::cout << boost::format("Enter Method: %s\n") % methodName;
 }
 
 void JNICALL MethodExitCallback(jvmtiEnv *jvmti,
-                                       JNIEnv *jni,
-                                       jthread thread,
-                                       jmethodID method,
-                                       jboolean was_popped_by_exception,
-                                       jvalue return_value) {
-    string methodName = get_method_name(jvmti, method);
-    stdout_message("Exit Method%s: %s\n", was_popped_by_exception == JNI_TRUE ? " (exception)" : "",
-                   methodName.c_str());
+                                JNIEnv *jni,
+                                jthread thread,
+                                jmethodID method,
+                                jboolean was_popped_by_exception,
+                                jvalue return_value) {
+    string methodName = get_method_name(*jvmti, method);
+    string wasException = was_popped_by_exception == JNI_TRUE ? " (exception)" : "";
+    std::cout << boost::format("Exit Method%s: %s\n") % wasException % methodName;
 }
 
 void JNICALL ExceptionCallback(jvmtiEnv *jvmti,
-                                      JNIEnv *jni,
-                                      jthread thread,
-                                      jmethodID method,
-                                      jlocation location,
-                                      jobject exception,
-                                      jmethodID catch_method,
-                                      jlocation catch_location) {
+                               JNIEnv *jni,
+                               jthread thread,
+                               jmethodID method,
+                               jlocation location,
+                               jobject exception,
+                               jmethodID catch_method,
+                               jlocation catch_location) {
 
-    string methodName = get_method_name(jvmti, method);
-    stdout_message("Uncought exception in Method: %s\n", methodName.c_str());
+    string methodName = get_method_name(*jvmti, method);
 
-    // Get the exception class
-    jclass exceptionType = jni->GetObjectClass(exception);
+    Object object = Object(*jvmti, *jni, exception);
+    string exceptionSignature = object.getType().getSignature();
 
-    // Get the class object's class descriptor
-    jclass classType = jni->GetObjectClass(exceptionType);
+    auto option = call_method(*jni, exception, "getMessage", "()Ljava/lang/String;");
+    auto message = option.is_initialized() ? to_string(*jni, (jstring) option.get()) : "";
 
-    char *exceptionSignature;
-    jvmtiError error = jvmti->GetClassSignature(exceptionType, &exceptionSignature, NULL);
-    check_jvmti_error(jvmti, error, "Unable to get class signature.");
-
-    printf("Exception signature:%s\n", exceptionSignature);
-
-    deallocate(jvmti, exceptionSignature);
-
-    // Find the getSimpleName() method in the class object
-    jmethodID methodId = jni->GetMethodID(classType, "getSimpleName", "()Ljava/lang/String;");
-    jstring className = (jstring) jni->CallObjectMethod(exceptionType, methodId);
-
-    // Convert to native string
-    const char *nativeString = jni->GetStringUTFChars(className, 0);
-
-    // Use your class name string
-    printf("Exception type:%s\n", nativeString);
-
-    // And finally, release the JNI objects after usage
-    jni->ReleaseStringUTFChars(className, nativeString);
-    jni->DeleteLocalRef(classType);
-    jni->DeleteLocalRef(exceptionType);
+    std::cout << boost::format("Uncought exception: %s, message: '%s'\n\tin method: %s\n")
+                 % exceptionSignature % message % methodName;
 }
 
 void JNICALL ExceptionCatchCallback(jvmtiEnv *jvmti,
-                                           JNIEnv *jni,
-                                           jthread thread,
-                                           jmethodID method,
-                                           jlocation location,
-                                           jobject exception) {
+                                    JNIEnv *jni,
+                                    jthread thread,
+                                    jmethodID method,
+                                    jlocation location,
+                                    jobject exception) {
 
-    string methodName = get_method_name(jvmti, method);
-    stdout_message("Cought exception in Method: %s\n", methodName.c_str());
+    string methodName = get_method_name(*jvmti, method);
 
-    /* Exception Class name */
-    // Get the exception class
-    jclass exceptionType = jni->GetObjectClass(exception);
+    Object object = Object(*jvmti, *jni, exception);
+    string exceptionSignature = object.getType().getSignature();
 
-    // Get the class object's class descriptor
-    jclass classType = jni->GetObjectClass(exceptionType);
+    auto option = call_method(*jni, exception, "getMessage", "()Ljava/lang/String;");
+    auto message = option.is_initialized() ? to_string(*jni, (jstring) option.get()) : "";
 
-    char *exceptionSignature;
-    jvmtiError error = jvmti->GetClassSignature(exceptionType, &exceptionSignature, NULL);
-    check_jvmti_error(jvmti, error, "Unable to get class signature.");
-
-    printf("Exception signature:%s\n", exceptionSignature);
-
-    deallocate(jvmti, exceptionSignature);
-
-    // Find the getSimpleName() method in the class object
-    jmethodID methodId = jni->GetMethodID(classType, "getSimpleName", "()Ljava/lang/String;");
-    jstring className = (jstring) jni->CallObjectMethod(exceptionType, methodId);
-
-    // Convert to native string
-    const char *nativeString = jni->GetStringUTFChars(className, 0);
-
-    // Use your class name string
-    printf("Exception type:%s\n", nativeString);
-
-    // And finally, release the JNI objects after usage
-    jni->ReleaseStringUTFChars(className, nativeString);
-    jni->DeleteLocalRef(classType);
-    jni->DeleteLocalRef(exceptionType);
+    std::cout << boost::format("Cought exception: %s, message: '%s'\n\tin method: %s\n")
+                 % exceptionSignature % message % methodName;
 
     /* Stack trace */
     // int depth = 5;
@@ -316,14 +274,14 @@ void JNICALL ExceptionCatchCallback(jvmtiEnv *jvmti,
 }
 
 void JNICALL ThreadStartCallback(jvmtiEnv *jvmti,
-                                        JNIEnv *env,
-                                        jthread thread) {
+                                 JNIEnv *env,
+                                 jthread thread) {
     enter_critical_section(jvmti);
     {
         /* It's possible we get here right after VmDeath event, be careful */
         if (!gdata->vm_is_dead) {
-            string threadName = get_thread_name(jvmti, env, thread);
-            stdout_message("ThreadStart: %s\n", threadName.c_str());
+            string threadName = get_thread_name(*jvmti, *env, thread);
+            std::cout << boost::format("ThreadStart: %s\n") % threadName;
         }
     }
     exit_critical_section(jvmti);
@@ -331,14 +289,14 @@ void JNICALL ThreadStartCallback(jvmtiEnv *jvmti,
 
 
 void JNICALL ThreadEndCallback(jvmtiEnv *jvmti,
-                                      JNIEnv *env,
-                                      jthread thread) {
+                               JNIEnv *jni,
+                               jthread thread) {
     enter_critical_section(jvmti);
     {
         /* It's possible we get here right after VmDeath event, be careful */
         if (!gdata->vm_is_dead) {
-            string threadName = get_thread_name(jvmti, env, thread);
-            stdout_message("ThreadEnd: %s\n", threadName.c_str());
+            string threadName = get_thread_name(*jvmti, *jni, thread);
+            std::cout << boost::format("ThreadEnd: %s\n") % threadName;
         }
     }
     exit_critical_section(jvmti);
@@ -346,26 +304,26 @@ void JNICALL ThreadEndCallback(jvmtiEnv *jvmti,
 
 
 void JNICALL ResourceExhaustedCallback(jvmtiEnv *jvmti,
-                                              JNIEnv *env,
-                                              jint flags,
-                                              const void *reserved,
-                                              const char *description) {
+                                       JNIEnv *env,
+                                       jint flags,
+                                       const void *reserved,
+                                       const char *description) {
     enter_critical_section(jvmti);
     {
         /* It's possible we get here right after VmDeath event, be careful */
         if (!gdata->vm_is_dead) {
             switch (flags) {
                 case JVMTI_RESOURCE_EXHAUSTED_OOM_ERROR:
-                    stdout_message("Out Of Memory Error, %s\n", description);
+                    std::cout << boost::format("Out Of Memory Error, %s\n") % description;
                     break;
                 case JVMTI_RESOURCE_EXHAUSTED_JAVA_HEAP:
-                    stdout_message("Exhausted Java Heap, %s\n", description);
+                    std::cout << boost::format("Exhausted Java Heap, %s\n") % description;
                     break;
                 case JVMTI_RESOURCE_EXHAUSTED_THREADS:
-                    stdout_message("Exhausted threads, %s\n", description);
+                    std::cout << boost::format("Exhausted threads, %s\n") % description;
                     break;
                 default:
-                    stdout_message("Unknown, %s\n", description);
+                    std::cout << boost::format("Unknown, %s\n") % description;
                     break;
             }
         }
@@ -379,11 +337,11 @@ void JNICALL ResourceExhaustedCallback(jvmtiEnv *jvmti,
 /* Enter a critical section by doing a JVMTI Raw Monitor Enter */
 void enter_critical_section(jvmtiEnv *jvmti) {
     jvmtiError error = jvmti->RawMonitorEnter(gdata->lock);
-    check_jvmti_error(jvmti, error, "Cannot enter with raw monitor");
+    check_jvmti_error(*jvmti, error, "Cannot enter with raw monitor");
 }
 
 /* Exit a critical section by doing a JVMTI Raw Monitor Exit */
 void exit_critical_section(jvmtiEnv *jvmti) {
     jvmtiError error = jvmti->RawMonitorExit(gdata->lock);
-    check_jvmti_error(jvmti, error, "Cannot exit with raw monitor");
+    check_jvmti_error(*jvmti, error, "Cannot exit with raw monitor");
 }                                              

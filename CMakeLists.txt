@@ -20,46 +20,54 @@ SET(CMAKE_COLOR_MAKEFILE ON)
 set(CMAKE_VERBOSE_MAKEFILE OFF)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-long-long -pedantic")
 
-if(NOT MSVC)
-    if(NOT USE_CPP_VERSION)
+if (NOT MSVC)
+    if (NOT USE_CPP_VERSION)
         set(USE_CPP_VERSION c++11)
-    endif()
+    endif ()
     message(STATUS "Use C++ version: ${USE_CPP_VERSION}")
     # following only available from cmake 2.8.12:
     #   add_compile_options(-std=${USE_CPP_VERSION})
     # so using this instead:
     add_definitions(-std=${USE_CPP_VERSION})
-endif()
+endif ()
 
-if(WIN32)
+if (WIN32)
     include_directories(
-        "C:/Program Files/Java/jdk1.8.0_51/include"
-        "C:/Program Files/Java/jdk1.8.0_51/include/win32"
-        "C:/Program Files/Java/jdk1.8.0/include"
-        "C:/Program Files/Java/jdk1.8.0/include/win32"
+            "C:/Program Files/Java/jdk1.8.0_51/include"
+            "C:/Program Files/Java/jdk1.8.0_51/include/win32"
+            "C:/Program Files/Java/jdk1.8.0/include"
+            "C:/Program Files/Java/jdk1.8.0/include/win32"
     )
-else()
+else ()
     include_directories(
-        "/usr/lib/jvm/java-8-oracle/include"
-        "/usr/lib/jvm/java-8-oracle/include/linux"
-        "/usr/lib/jvm/java-7-openjdk-amd64/include"
-        "/usr/lib/jvm/java-7-openjdk-amd64/include/linux"
+            "/usr/lib/jvm/java-8-oracle/include"
+            "/usr/lib/jvm/java-8-oracle/include/linux"
+            "/usr/lib/jvm/java-7-openjdk-amd64/include"
+            "/usr/lib/jvm/java-7-openjdk-amd64/include/linux"
     )
-endif()
+endif ()
+
+# Dependencies
+
+set(Boost_USE_STATIC_LIBS NO)
+set(Boost_USE_STATIC_RUNTIME ON)
+set(Boost_USE_MULTITHREADED ON)
+find_package(Boost 1.54.0 REQUIRED COMPONENTS system)
+add_definitions(${Boost_LIB_DIAGNOSTIC_DEFINITIONS})
+include_directories(${Boost_INCLUDE_DIRS})
 
 # Build
 
-set(SOURCE_FILES 
-    src/main.hpp
-    src/main.cpp
-    src/common.hpp
-    src/common.cpp
-    src/jvmti.hpp
-    src/jvmti.cpp
-    src/message.hpp
-    src/message.cpp
-)
+set(SOURCE_FILES
+        src/boost.hpp
+        src/main.cpp src/main.hpp
+        src/jvmti.cpp src/jvmti.hpp
+        src/jni.cpp src/jni.hpp
+        src/Object.cpp src/Object.hpp
+        src/Type.cpp src/Type.hpp
+    )
 add_library(jeff-native-agent SHARED ${SOURCE_FILES})
+target_link_libraries(jeff-native-agent ${Boost_LIBRARIES})
 
 # Packaging
 
@@ -72,10 +80,10 @@ set(CPACK_PACKAGE_VENDOR "bluecatcode.com")
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/LICENSE")
 set(CPACK_PACKAGE_NAME ${CMAKE_PROJECT_NAME})
 
-if(WIN32)
+if (WIN32)
     set(CPACK_GENERATOR ZIP)
-else()
+else ()
     set(CPACK_GENERATOR TGZ)
-endif()
+endif ()
 
 include(CPack)

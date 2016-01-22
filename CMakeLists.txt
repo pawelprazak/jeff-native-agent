@@ -52,7 +52,7 @@ endif ()
 set(Boost_USE_STATIC_LIBS NO)
 set(Boost_USE_STATIC_RUNTIME ON)
 set(Boost_USE_MULTITHREADED ON)
-find_package(Boost 1.54.0 REQUIRED COMPONENTS system)
+find_package(Boost 1.46.0 REQUIRED COMPONENTS system)
 add_definitions(${Boost_LIB_DIAGNOSTIC_DEFINITIONS})
 include_directories(${Boost_INCLUDE_DIRS})
 

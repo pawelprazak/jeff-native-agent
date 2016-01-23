@@ -4,8 +4,13 @@
 [![Build status](https://ci.appveyor.com/api/projects/status/8sjmq6gs13c44lgp?svg=true)](https://ci.appveyor.com/project/pawelprazak/jeff-native-agent)
 
 ## Dependencies
+Debian/Ubuntu:
 
     sudo apt-get install libboost-all-dev
+
+Windows:
+
+    choco install boost-msvc-12
 
 ## Building
 

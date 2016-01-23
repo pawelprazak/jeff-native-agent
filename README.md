@@ -31,13 +31,25 @@ Jeff uses cmake:
 
 ## JVM TI and JNI
 
-[JVM Tool Interface Version 1.2](https://docs.oracle.com/javase/8/docs/platform/jvmti/jvmti.html)
+[Oracle - JVM Tool Interface Version 1.2](https://docs.oracle.com/javase/8/docs/platform/jvmti/jvmti.html)
 
-[Java Native Interface Specification](https://docs.oracle.com/javase/8/docs/technotes/guides/jni/spec/jniTOC.html)
+[Oracle - Java Native Interface Specification](https://docs.oracle.com/javase/8/docs/technotes/guides/jni/spec/jniTOC.html)
+
+[Wikipedia - Java Native Interface](https://en.wikipedia.org/wiki/Java_Native_Interface)
+
+[IBM - Best practices for using the Java Native Interface](http://www.ibm.com/developerworks/library/j-jni/)
+
+[IBM - Java programming with JNI](http://www.ibm.com/developerworks/java/tutorials/j-jni/j-jni.html)
+
+[IBM - The JNI and the Garbage Collector](http://www-01.ibm.com/support/knowledgecenter/SSYKE2_5.0.0/com.ibm.java.doc.diagnostics.50/diag/understanding/jni_gc.html)
+
+[Android - JNI Tips](https://developer.android.com/training/articles/perf-jni.html)
+
+[CERT - Coding Standard for Java - JNI](https://www.securecoding.cert.org/confluence/pages/viewpage.action?pageId=121930001)
 
 ## License
 
-Jeff is available under the Apache License Version 2.0. See LICENSE.txt.
+Jeff is available under the Apache License Version 2.0. See LICENSE.
 
 ## Authors
 

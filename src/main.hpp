@@ -3,18 +3,6 @@
 
 #include "jvmti.h"
 
-typedef struct {
-    /* JVMTI Environment */
-    jvmtiEnv *jvmti;
-    jboolean vm_is_dead;
-    jboolean vm_is_initialized;
-    jboolean vm_is_started;
-    /* Data access Lock */
-    jrawMonitorID lock;
-} GlobalAgentData;
-
-static GlobalAgentData *gdata;
-
 /**
  * The VM will start the agent by calling this function.
  */

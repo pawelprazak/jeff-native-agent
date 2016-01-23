@@ -1,4 +1,5 @@
 #include "jvmti.hpp"
+#include "jni.hpp"
 
 #include <sstream>
 
@@ -65,7 +66,7 @@ string get_thread_name(jvmtiEnv &jvmti, JNIEnv &jni, jthread thread) {
 string get_error_name(jvmtiEnv &jvmti, jvmtiError error, const string message) {
     char *error_name = NULL;
     jvmtiError error_ = jvmti.GetErrorName(error, &error_name);
-    BOOST_ASSERT_MSG(error_ == JVMTI_ERROR_NONE, "JVMTI ERROR while getting an error name");
+    ASSERT_MSG(error_ == JVMTI_ERROR_NONE, "JVMTI ERROR while getting an error name");
 
     const string messageSeparator = message.empty() ? "" : " ";
     auto name = format("%s%sJVMTI ERROR: %d(%s)\n") % message % messageSeparator % error %
@@ -80,7 +81,7 @@ string get_error_name(jvmtiEnv &jvmti, jvmtiError error, const string message) {
  *   name, making the error messages much easier to understand.
  */
 void check_jvmti_error(jvmtiEnv &jvmti, jvmtiError error, const string message) {
-    BOOST_ASSERT_MSG(error == JVMTI_ERROR_NONE, get_error_name(jvmti, error, message).c_str());
+    ASSERT_MSG(error == JVMTI_ERROR_NONE, get_error_name(jvmti, error, message).c_str());
 }
 
 /* All memory allocated by JVMTI must be freed by the JVMTI Deallocate

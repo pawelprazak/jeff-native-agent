@@ -3,11 +3,11 @@
  */
 
 #include "main.hpp"
+#include "jni.hpp"
 #include "jvmti.hpp"
+#include "GlobalAgentData.hpp"
 #include "Object.hpp"
 #include "Type.hpp"
-#include "jni.hpp"
-#include <boost/fusion/include/transform.hpp>
 
 using namespace std;
 
@@ -42,6 +42,7 @@ jint init(JavaVM *jvm, char *options) {
 
     /* Setup initial global agent data area */
     gdata = new GlobalAgentData();
+    gdata->jvm = jvm;
     gdata->jvmti = jvmti;
 
     /* Immediately after getting the jvmti* we need to ask for the

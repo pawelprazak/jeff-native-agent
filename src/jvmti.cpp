@@ -38,10 +38,9 @@ string get_method_name(jvmtiEnv &jvmti, jmethodID method) {
 /* Get a name for a jthread */
 string get_thread_name(jvmtiEnv &jvmti, JNIEnv &jni, jthread thread) {
     jvmtiThreadInfo info = {0};
-    jvmtiError error;
 
     /* Get the thread information, which includes the name */
-    error = jvmti.GetThreadInfo(thread, &info);
+    auto error = jvmti.GetThreadInfo(thread, &info);
     check_jvmti_error(jvmti, error, "Cannot get thread info");
 
     std::stringstream stream;
@@ -61,6 +60,46 @@ string get_thread_name(jvmtiEnv &jvmti, JNIEnv &jni, jthread thread) {
     jni.DeleteLocalRef(info.context_class_loader);
 
     return stream.str();
+}
+
+string get_location(jvmtiEnv &jvmti, jmethodID method, jlocation location) {
+    jvmtiJlocationFormat format;
+
+    auto error = jvmti.GetJLocationFormat(&format);
+    check_jvmti_error(jvmti, error, "Cannot get location format");
+
+    string ret;
+    switch (format) {
+        case JVMTI_JLOCATION_JVMBCI: ret = get_bytecode_location(jvmti, method, location); break;
+        case JVMTI_JLOCATION_MACHINEPC: ret = (boost::format("native: %s") % (jlong) location).str(); break;
+        case JVMTI_JLOCATION_OTHER: ret = "unknown"; break;
+    }
+
+    return ret;
+}
+
+string get_bytecode_location(jvmtiEnv &jvmti, jmethodID method, jlocation location) {
+    jint entryCount;
+    jvmtiLineNumberEntry *entries;
+
+    auto error = jvmti.GetLineNumberTable(method, &entryCount, &entries);
+    check_jvmti_error(jvmti, error, "Cannot get line number table");
+
+    string ret;
+
+    bool found = false;
+    auto entry = entries;
+    for (int i = 0; i < entryCount; ++i, entry++) {
+        if (entry->start_location == location) {
+            ret = (boost::format("line: %s") % entry->line_number).str();
+            found = true;
+        }
+    }
+    if (!found) {
+        ret = (boost::format("line: %s (~%s)") % entries->line_number % location).str();
+    }
+    deallocate(jvmti, entries);
+    return ret;
 }
 
 string get_error_name(jvmtiEnv &jvmti, jvmtiError error, const string message) {

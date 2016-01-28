@@ -23,7 +23,7 @@ Jeff uses cmake:
 
 ## Basic scripts
 
-    ./build.sh && ./hello.sh > agent.log
+    ./build.sh && ./hello.sh && less jeff.log
 
 ## Dependecies
 
@@ -46,6 +46,8 @@ Jeff uses cmake:
 [Android - JNI Tips](https://developer.android.com/training/articles/perf-jni.html)
 
 [CERT - Coding Standard for Java - JNI](https://www.securecoding.cert.org/confluence/pages/viewpage.action?pageId=121930001)
+
+[AMD - JVMTI Event Piggybacking For Precise Source Mapping](https://web.archive.org/web/20120607024712/http://developer.amd.com/documentation/articles/pages/JVMTIEventPiggybacking.aspx)
 
 ## License
 

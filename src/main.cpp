@@ -57,6 +57,7 @@ jint init(JavaVM *jvm, char *options) {
     capabilities.can_generate_resource_exhaustion_heap_events = 1;
     capabilities.can_generate_resource_exhaustion_threads_events = 1;
     capabilities.can_tag_objects = 1;
+    capabilities.can_get_line_numbers = 1;
 
     jvmtiError error;
 
@@ -200,8 +201,8 @@ void JNICALL MethodExitCallback(jvmtiEnv *jvmti,
                                 jboolean was_popped_by_exception,
                                 jvalue return_value) {
     string methodName = get_method_name(*jvmti, method);
-    string wasException = was_popped_by_exception == JNI_TRUE ? " (exception)" : "";
-    std::cout << boost::format("Exit Method%s: %s\n") % wasException % methodName;
+    string wasException = was_popped_by_exception == JNI_TRUE ? " (popped_by_exception)" : "";
+    std::cout << boost::format("Exit Method : %s %s\n") % methodName % wasException;
 }
 
 void JNICALL ExceptionCallback(jvmtiEnv *jvmti,
@@ -221,8 +222,10 @@ void JNICALL ExceptionCallback(jvmtiEnv *jvmti,
     auto option = call_method(*jni, exception, "getMessage", "()Ljava/lang/String;");
     auto message = option.is_initialized() ? to_string(*jni, (jstring) option.get()) : "";
 
-    std::cout << boost::format("Uncought exception: %s, message: '%s'\n\tin method: %s\n")
-                 % exceptionSignature % message % methodName;
+    string line = get_location(*jvmti, method, location);
+
+    std::cout << boost::format("Uncought exception: %s, message: '%s'\n\tin method: %s [%s]\n")
+                 % exceptionSignature % message % methodName % line;
 }
 
 void JNICALL ExceptionCatchCallback(jvmtiEnv *jvmti,
@@ -240,8 +243,10 @@ void JNICALL ExceptionCatchCallback(jvmtiEnv *jvmti,
     auto option = call_method(*jni, exception, "getMessage", "()Ljava/lang/String;");
     auto message = option.is_initialized() ? to_string(*jni, (jstring) option.get()) : "";
 
-    std::cout << boost::format("Cought exception: %s, message: '%s'\n\tin method: %s\n")
-                 % exceptionSignature % message % methodName;
+    string line = get_location(*jvmti, method, location);
+
+    std::cout << boost::format("Cought exception: %s, message: '%s'\n\tin method: %s [%s]\n")
+                 % exceptionSignature % message % methodName % line;
 
     /* Stack trace */
     // int depth = 5;

@@ -3,6 +3,7 @@
 
 #include "jvmti.h"
 #include <string>
+#include <list>
 
 #include "boost.hpp"
 
@@ -13,6 +14,8 @@ std::string get_thread_name(jvmtiEnv &jvmti, JNIEnv &jni, jthread thread);
 std::string get_location(jvmtiEnv &jvmti, jmethodID method, jlocation location);
 
 std::string get_bytecode_location(jvmtiEnv &jvmti, jmethodID method, jlocation location);
+
+std::list<std::string> get_stack_trace(jvmtiEnv &jvmti, jthread thread, int depth = 5);
 
 std::string get_error_name(jvmtiEnv &jvmti, jvmtiError error, const std::string message = "");
 

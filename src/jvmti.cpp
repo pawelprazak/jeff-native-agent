@@ -91,15 +91,30 @@ string get_bytecode_location(jvmtiEnv &jvmti, jmethodID method, jlocation locati
     auto entry = entries;
     for (int i = 0; i < entryCount; ++i, entry++) {
         if (entry->start_location == location) {
-            ret = (boost::format("line: %s") % entry->line_number).str();
+            ret = (format("line: %s") % entry->line_number).str();
             found = true;
         }
     }
     if (!found) {
-        ret = (boost::format("line: %s (~%s)") % entries->line_number % location).str();
+        ret = (format("line: %s (~%s)") % entries->line_number % location).str();
     }
     deallocate(jvmti, entries);
     return ret;
+}
+
+list<string> get_stack_trace(jvmtiEnv &jvmti, jthread thread, int depth) {
+    unique_ptr<jvmtiFrameInfo[]> frames(new jvmtiFrameInfo[depth]);
+    jint count;
+
+    auto error = jvmti.GetStackTrace(thread, 0, depth, frames.get(), &count);
+    check_jvmti_error(jvmti, error, "Unable to get stack trace frames");
+
+    list<string> lines;
+    for (size_t i = 0; i < count; i++) {
+        lines.push_back(get_method_name(jvmti, frames[i].method));
+    }
+
+    return lines;
 }
 
 string get_error_name(jvmtiEnv &jvmti, jvmtiError error, const string message) {

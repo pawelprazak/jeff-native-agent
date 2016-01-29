@@ -24,6 +24,7 @@ Jeff uses cmake:
 ## Basic scripts
 
     ./build.sh && ./hello.sh && less jeff.log
+    ./build.sh && ./hello.sh && cat jeff.log | grep -A 10 "Uncought exception"
 
 ## Dependecies
 

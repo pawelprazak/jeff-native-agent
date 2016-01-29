@@ -223,9 +223,12 @@ void JNICALL ExceptionCallback(jvmtiEnv *jvmti,
     auto message = option.is_initialized() ? to_string(*jni, (jstring) option.get()) : "";
 
     string line = get_location(*jvmti, method, location);
+    list<string> stack_traces = get_stack_trace(*jvmti, thread);
+    string stack_trace = std::accumulate(stack_traces.begin(), stack_traces.end(), string(""),
+                                         [](string a, string b) { return "\t" + a + "\n\t" + b; });
 
-    std::cout << boost::format("Uncought exception: %s, message: '%s'\n\tin method: %s [%s]\n")
-                 % exceptionSignature % message % methodName % line;
+    std::cout << boost::format("Uncought exception: %s, message: '%s'\n\tin method: %s [%s]\nStack trace:%s\n\n")
+                 % exceptionSignature % message % methodName % line % stack_trace;
 }
 
 void JNICALL ExceptionCatchCallback(jvmtiEnv *jvmti,
@@ -247,36 +250,6 @@ void JNICALL ExceptionCatchCallback(jvmtiEnv *jvmti,
 
     std::cout << boost::format("Cought exception: %s, message: '%s'\n\tin method: %s [%s]\n")
                  % exceptionSignature % message % methodName % line;
-
-    /* Stack trace */
-    // int depth = 5;
-    // jvmtiFrameInfo frames[depth];
-    // jint count;
-
-    // error = jvmti->GetStackTrace(thread, 0, depth, (jvmtiFrameInfo *) &frames, &count);
-    // check_jvmti_error(jvmti, error, "Unable to get stack trace.");
-
-    // printf("Exception Stack Trace\n");
-    // printf("=====================\n");
-    // printf("Stack Trace Depth: %d\n", count);
-
-    // char *methodName = "yet_to_call()";
-    // char *declaringClassName;
-    // jclass declaringClass;
-
-    // for (int i=0; i < count; i++) {
-    //     error = jvmti->GetMethodName(frames[i].method, &methodName, NULL, NULL);
-
-    //     if (error == JVMTI_ERROR_NONE) {
-    //         error = jvmti->GetMethodDeclaringClass(frames[i].method, &declaringClass);
-    //         error = jvmti->GetClassSignature(declaringClass, &declaringClassName, NULL);
-
-    //         if (error == JVMTI_ERROR_NONE) {
-    //             printf("at method %s() in class %s\n", methodName, declaringClassName);
-    //         }
-    //     }
-    // }
-    // printf("=====================\n");
 }
 
 void JNICALL ThreadStartCallback(jvmtiEnv *jvmti,

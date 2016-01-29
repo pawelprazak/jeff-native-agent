@@ -4,7 +4,21 @@ echo "Building jeff-app project..."
 
 (cd jeff-app && mvn clean install package >> /dev/null)
 
-echo "Running jeff-app.jar with jeff libjeff-native-agent.so"
+echo "Running jeff-app.jar with jeff agent"
+
+JEFF_PATH="build/libjeff-native-agent.so"
+
+if [ ! -f ${JEFF_PATH}  ]; then
+    echo "File ${JEFF_PATH} not found"
+    exit 1
+fi
+
+JAR_PATH="jeff-app/target/jeff-app-1.0-SNAPSHOT.jar"
+
+if [ ! -f ${JAR_PATH}  ]; then
+    echo "File ${JAR_PATH} not found"
+    exit 1
+fi
 
 LOG_FILE=jeff.log
 
@@ -18,8 +32,8 @@ java -showversion \
     -XX:+UseCompressedOops \
     -XX:+TieredCompilation -XX:TieredStopAtLevel=1 \
     -verbose:jni \
-    -agentpath:build/libjeff-native-agent.so \
-    -jar jeff-app/target/jeff-app-1.0-SNAPSHOT.jar > ${LOG_FILE}
+    -agentpath:${JEFF_PATH} \
+    -jar ${JAR_PATH} > ${LOG_FILE}
 
 echo
 echo "Output logged into: ${LOG_FILE}"

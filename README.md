@@ -49,6 +49,10 @@ Jeff uses cmake:
 
 [AMD - JVMTI Event Piggybacking For Precise Source Mapping](https://web.archive.org/web/20120607024712/http://developer.amd.com/documentation/articles/pages/JVMTIEventPiggybacking.aspx)
 
+## C++
+
+[Google C++ Style Guide](https://google.github.io/styleguide/cppguide.html)
+
 ## License
 
 Jeff is available under the Apache License Version 2.0. See LICENSE.

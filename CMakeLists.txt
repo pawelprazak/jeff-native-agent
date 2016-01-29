@@ -13,12 +13,14 @@ set(LIB_MINOR_VERSION "1")
 set(LIB_PATCH_VERSION "1")
 set(LIB_VERSION_STRING "${LIB_MAJOR_VERSION}.${LIB_MINOR_VERSION}.${LIB_PATCH_VERSION}")
 
-#  Compiler and Linker flags
+# Compiler and Linker flags
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-SET(CMAKE_COLOR_MAKEFILE ON)
-set(CMAKE_VERBOSE_MAKEFILE OFF)
+set(CMAKE_COLOR_MAKEFILE ON)
+set(CMAKE_VERBOSE_MAKEFILE ON)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-long-long -pedantic")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Werror -Wno-missing-field-initializers")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O4 -DNDEBUG")
 
 if (NOT MSVC)
     if (NOT USE_CPP_VERSION)
@@ -66,8 +68,9 @@ set(SOURCE_FILES
         src/jni.cpp src/jni.hpp
         src/Object.cpp src/Object.hpp
         src/Type.cpp src/Type.hpp
-    )
+)
 add_library(jeff-native-agent SHARED ${SOURCE_FILES})
+
 target_link_libraries(jeff-native-agent ${Boost_LIBRARIES})
 
 # Packaging

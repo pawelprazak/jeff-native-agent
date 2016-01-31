@@ -21,6 +21,10 @@ Jeff uses cmake:
     cmake ..
     make
 
+## Testing
+
+    ./hello.sh --help
+
 ## Basic scripts
 
     ./build.sh && ./hello.sh && less jeff.log
@@ -53,6 +57,17 @@ Jeff uses cmake:
 ## C++
 
 [Google C++ Style Guide](https://google.github.io/styleguide/cppguide.html)
+
+## Valgrind
+
+Generating the suppressions:
+
+    valgrind -v --leak-check=yes --leak-check=full --show-leak-kinds=all --show-reachable=yes --error-limit=no --log-file=minimalraw.log --gen-suppressions=all java ...
+    cat ./minimalraw.log | ./parse_valgrind_suppressions.sh > minimal.supp
+
+than manually change `minimal.supp` into ``
+
+[Valgrind Manual - core.suppress](http://valgrind.org/docs/manual/manual-core.html#manual-core.suppress)
 
 ## License
 

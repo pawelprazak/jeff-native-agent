@@ -223,9 +223,10 @@ void JNICALL ExceptionCallback(jvmtiEnv *jvmti,
     auto message = option.is_initialized() ? to_string(*jni, (jstring) option.get()) : "";
 
     string line = get_location(*jvmti, method, location);
+
     list<string> stack_traces = get_stack_trace(*jvmti, thread);
-    string stack_trace = std::accumulate(stack_traces.begin(), stack_traces.end(), string(""),
-                                         [](string a, string b) { return "\t" + a + "\n\t" + b; });
+    auto join_lines = [](string a, string b) { return "\t" + a + "\n\t" + b; };
+    string stack_trace = std::accumulate(stack_traces.begin(), stack_traces.end(), string(""), join_lines);
 
     std::cout << boost::format("Uncought exception: %s, message: '%s'\n\tin method: %s [%s]\nStack trace:%s\n\n")
                  % exceptionSignature % message % methodName % line % stack_trace;

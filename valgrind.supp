@@ -1,0 +1,91 @@
+{
+   ignore libjvm.so addr4
+   Memcheck:Addr4
+   ...
+   obj:/usr/lib/jvm/java-8-oracle/jre/lib/amd64/server/libjvm.so
+   ...
+}
+{
+   ignore libjvm.so cond
+   Memcheck:Cond
+   ...
+   obj:/usr/lib/jvm/java-8-oracle/jre/lib/amd64/server/libjvm.so
+   ...
+}
+{
+   ignore libjvm.so leak
+   Memcheck:Leak
+   fun:*alloc
+   ...
+   obj:/usr/lib/jvm/java-8-oracle/jre/lib/amd64/server/libjvm.so
+   ...
+}
+
+{
+   ignore libjli.so addr4
+   Memcheck:Addr4
+   ...
+   obj:/usr/lib/jvm/java-8-oracle/jre/lib/amd64/jli/libjli.so
+   ...
+}
+{
+   ignore libjli.so leak
+   Memcheck:Leak
+   fun:*alloc
+   ...
+   obj:/usr/lib/jvm/java-8-oracle/jre/lib/amd64/jli/libjli.so
+   ...
+}
+
+{
+   ignore libzip.so addr4
+   Memcheck:Addr4
+   ...
+   obj:/usr/lib/jvm/java-8-oracle/jre/lib/amd64/libzip.so
+   ...
+}
+{
+   ignore libzip.so leak
+   Memcheck:Leak
+   fun:*alloc
+   ...
+   obj:/usr/lib/jvm/java-8-oracle/jre/lib/amd64/libzip.so
+   ...
+}
+
+{
+   ignore libjava.so leak
+   Memcheck:Leak
+   fun:*alloc
+   ...
+   obj:/usr/lib/jvm/java-8-oracle/jre/lib/amd64/libjava.so
+   ...
+}
+
+{
+   ignore all addr4
+   Memcheck:Addr4
+   ...
+   obj:*
+   ...
+}
+
+{
+   _dl_catch_error openaux
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:*alloc
+   ...
+   fun:openaux
+   ...
+   fun:_dl_catch_error
+}
+
+{
+   ignore glibc reachable
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:*alloc
+   ...
+   fun:dlopen@@GLIBC_*
+}

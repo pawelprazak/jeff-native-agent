@@ -13,13 +13,30 @@ set(LIB_MINOR_VERSION "1")
 set(LIB_PATCH_VERSION "1")
 set(LIB_VERSION_STRING "${LIB_MAJOR_VERSION}.${LIB_MINOR_VERSION}.${LIB_PATCH_VERSION}")
 
+message("\nBuilding ${PROJECT_NAME} ${LIB_VERSION_STRING}\n")
+
+# Try to find the current Git hash.
+find_package(Git)
+if (GIT_EXECUTABLE)
+    execute_process(
+            COMMAND "${GIT_EXECUTABLE}" log -n 1 --pretty=%h
+            OUTPUT_VARIABLE GIT_HASH
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+
+    set(LWS_BUILD_HASH ${GIT_HASH})
+    message("Git commit hash: ${LWS_BUILD_HASH}\n")
+endif ()
+
 # Compiler and Linker flags
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_COLOR_MAKEFILE ON)
-set(CMAKE_VERBOSE_MAKEFILE ON)
+#set(CMAKE_VERBOSE_MAKEFILE ON)
+
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-long-long -pedantic")
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Werror -Wno-missing-field-initializers")
+set(CMAKE_CXX_FLAGS_VALGRIND "-fno-inline")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${CMAKE_CXX_FLAGS_VALGRIND} -Werror -Wno-missing-field-initializers")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O4 -DNDEBUG")
 
 if (NOT MSVC)
@@ -72,6 +89,30 @@ set(SOURCE_FILES
 add_library(jeff-native-agent SHARED ${SOURCE_FILES})
 
 target_link_libraries(jeff-native-agent ${Boost_LIBRARIES})
+
+# Test
+#[[
+enable_testing()
+include(CTest)
+if (UNIX)
+    find_program(CMAKE_MEMORYCHECK_COMMAND valgrind)
+endif ()
+
+function(add_memcheck_test name binary)
+    find_program(CMAKE_MEMORYCHECK_COMMAND valgrind)
+    set(MEMORYCHECK_COMMAND_OPTIONS "--trace-children=yes --leak-check=full")
+    #    set(MEMORYCHECK_SUPPRESSIONS_FILE "${PROJECT_SOURCE_DIR}/valgrind_suppress.txt")
+    set(memcheck_command "${CMAKE_MEMORYCHECK_COMMAND} ${CMAKE_MEMORYCHECK_COMMAND_OPTIONS}")
+    separate_arguments(memcheck_command)
+    add_test(${name} ${binary} ${ARGN})
+    add_test(memcheck_${name} ${memcheck_command} ./${binary} ${ARGN})
+endfunction(add_memcheck_test)
+
+function(set_memcheck_test_properties name)
+    set_tests_properties(${name} ${ARGN})
+    set_tests_properties(memcheck_${name} ${ARGN})
+endfunction(set_memcheck_test_properties)
+]]
 
 # Packaging
 

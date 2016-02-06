@@ -90,30 +90,6 @@ add_library(jeff-native-agent SHARED ${SOURCE_FILES})
 
 target_link_libraries(jeff-native-agent ${Boost_LIBRARIES})
 
-# Test
-#[[
-enable_testing()
-include(CTest)
-if (UNIX)
-    find_program(CMAKE_MEMORYCHECK_COMMAND valgrind)
-endif ()
-
-function(add_memcheck_test name binary)
-    find_program(CMAKE_MEMORYCHECK_COMMAND valgrind)
-    set(MEMORYCHECK_COMMAND_OPTIONS "--trace-children=yes --leak-check=full")
-    #    set(MEMORYCHECK_SUPPRESSIONS_FILE "${PROJECT_SOURCE_DIR}/valgrind_suppress.txt")
-    set(memcheck_command "${CMAKE_MEMORYCHECK_COMMAND} ${CMAKE_MEMORYCHECK_COMMAND_OPTIONS}")
-    separate_arguments(memcheck_command)
-    add_test(${name} ${binary} ${ARGN})
-    add_test(memcheck_${name} ${memcheck_command} ./${binary} ${ARGN})
-endfunction(add_memcheck_test)
-
-function(set_memcheck_test_properties name)
-    set_tests_properties(${name} ${ARGN})
-    set_tests_properties(memcheck_${name} ${ARGN})
-endfunction(set_memcheck_test_properties)
-]]
-
 # Packaging
 
 set(CPACK_PACKAGE_VERSION_MAJOR ${LIBOSMIUM_VERSION_MAJOR})

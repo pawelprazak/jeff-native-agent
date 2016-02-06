@@ -1,0 +1,65 @@
+*~
+*.log
+*.bak
+*.tmp
+*.swp
+*.lock
+
+# JVM
+*.class
+# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
+hs_err_pid*
+
+# Mobile Tools for Java (J2ME)
+.mtj.tmp/
+
+# Maven
+target
+dependency-reduced-pom.xml
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.next
+release.properties
+.surefire-*
+
+# Gradle
+.gradle
+build
+
+# Packages
+*.jar
+*.war
+*.ear
+*.zip
+
+# Eclipse
+.classpath
+.project
+.settings
+.metadata
+.factorypath
+.studio
+
+# IDEA IntelliJ
+*.ipr
+*.iws
+*.iml
+.idea
+.idea_modules
+out
+atlassian-ide-plugin.xml
+
+# Android Studio
+local.properties
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# KDE directory preferences
+.directory
+
+# OS X
+.DS_Store
+.Trashes

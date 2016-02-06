@@ -1,18 +1,20 @@
-sudo: true
-
 language: cpp
 
 compiler:
 #- gcc # the defualt gcc 4.6.x deos not support -std=c++11
 - clang
 
+addons:
+  apt:
+    packages:
+    - libboost-dev
+    - libboost-system-dev
+
 before_install:
 - echo $LANG
 - echo $LC_ALL
 
 before_script:
-  - sudo apt-get update -qq
-  - sudo apt-get install libboost-dev libboost-system-dev
   - mkdir build
   - cd build
   - cmake ..

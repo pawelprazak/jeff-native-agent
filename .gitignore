@@ -23,6 +23,7 @@ install_manifest.txt
 *.iml
 .idea
 .idea_modules
+.sonar_lock
 
 # Windows
 Thumbs.db

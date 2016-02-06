@@ -40,12 +40,12 @@ esac
 done
 
 if [ ${MAVEN} == YES ]; then
-    echo "Building jeff-app project..."
-    (cd jeff-app && mvn clean install package >> /dev/null)
+    echo "Building jeff-hello project..."
+    (cd jeff-hello && mvn clean install package >> /dev/null)
 fi
 
 
-echo "Running jeff-app.jar with jeff agent"
+echo "Running jeff-hello.jar with jeff agent"
 
 JEFF_PATH="build/libjeff-native-agent.so"
 
@@ -54,7 +54,7 @@ if [ ! -f ${JEFF_PATH}  ]; then
     exit 1
 fi
 
-JAR_PATH="jeff-app/target/jeff-app-1.0-SNAPSHOT.jar"
+JAR_PATH="jeff-hello/target/jeff-hello-1.0-SNAPSHOT.jar"
 
 if [ ! -f ${JAR_PATH}  ]; then
     echo "File ${JAR_PATH} not found"

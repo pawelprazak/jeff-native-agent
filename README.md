@@ -75,5 +75,5 @@ Jeff is available under the Apache License Version 2.0. See LICENSE.
 
 ## Authors
 
-Jeff was mainly written and is maintained by Paweł Prażak and Bartłomiej Antoniak
+Jeff was mainly written and is maintained by Paweł Prażak and Bartłomiej Antoniak.
 See the git commit log for details.

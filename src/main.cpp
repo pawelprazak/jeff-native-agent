@@ -2,14 +2,15 @@
  * see: https://docs.oracle.com/javase/8/docs/platform/jvmti/jvmti.html
  */
 
+#include "GlobalAgentData.hpp"
 #include "main.hpp"
 #include "jni.hpp"
 #include "jvmti.hpp"
-#include "GlobalAgentData.hpp"
 #include "Object.hpp"
 #include "Type.hpp"
 
 using namespace std;
+using namespace jeff;
 
 JNIEXPORT jint JNICALL
 Agent_OnLoad(JavaVM *jvm, char *options, void *reserved) {
@@ -18,13 +19,13 @@ Agent_OnLoad(JavaVM *jvm, char *options, void *reserved) {
 
 JNIEXPORT jint JNICALL
 Agent_OnAttach(JavaVM *jvm, char *options, void *reserved) {
-    return init(jvm, options);
+    init(jvm, options);
+    return live(*gdata.jvmti);
 }
 
 JNIEXPORT void JNICALL
 Agent_OnUnload(JavaVM *jvm) {
     /* Make sure all allocated space is freed */
-    delete (gdata);
 }
 
 jint init(JavaVM *jvm, char *options) {
@@ -41,23 +42,25 @@ jint init(JavaVM *jvm, char *options) {
     }
 
     /* Setup initial global agent data area */
-    gdata = new GlobalAgentData();
-    gdata->jvm = jvm;
-    gdata->jvmti = jvmti;
+    gdata.jvm = jvm;
+    gdata.jvmti = jvmti;
+
+    print_possible_capabilities(*jvmti);
 
     /* Immediately after getting the jvmti* we need to ask for the
      *   capabilities this agent will need. In this case we need to make
      *   sure that we can get all class load hooks.
      */
-    jvmtiCapabilities capabilities = jvmtiCapabilities();
+    jvmtiCapabilities capabilities = {0};
     capabilities.can_get_owned_monitor_info = 1;
+    capabilities.can_get_line_numbers = 1;
+    capabilities.can_get_source_file_name = 1;
+    capabilities.can_tag_objects = 1;
     capabilities.can_generate_method_entry_events = 1;
     capabilities.can_generate_method_exit_events = 1;
     capabilities.can_generate_exception_events = 1;
     capabilities.can_generate_resource_exhaustion_heap_events = 1;
     capabilities.can_generate_resource_exhaustion_threads_events = 1;
-    capabilities.can_tag_objects = 1;
-    capabilities.can_get_line_numbers = 1;
 
     jvmtiError error;
 
@@ -99,7 +102,7 @@ jint init(JavaVM *jvm, char *options) {
 
     /* Here we create a raw monitor for our use in this agent to protect critical sections of code.
      */
-    error = jvmti->CreateRawMonitor("agent data", &(gdata->lock));
+    error = jvmti->CreateRawMonitor("agent data", &(gdata.lock));
     check_jvmti_error(*jvmti, error, "Cannot create raw monitor");
 
     return JNI_OK;
@@ -140,7 +143,7 @@ void JNICALL VMStartCallback(jvmtiEnv *jvmti, JNIEnv *env) {
         std::cout << "VMStart\n";
 
         /* Indicate VM has started */
-        gdata->vm_is_started = JNI_TRUE;
+        gdata.vm_is_started = JNI_TRUE;
     }
     exit_critical_section(jvmti);
 }
@@ -154,7 +157,7 @@ void JNICALL VMInitCallback(jvmtiEnv *jvmti, JNIEnv *env, jthread thread) {
         std::cout << boost::format("VMInit %s\n") % threadName;
 
         /* Indicate VM has initialized */
-        gdata->vm_is_initialized = JNI_TRUE;
+        gdata.vm_is_initialized = JNI_TRUE;
 
         /* The VM is now initialized, at this time we make our requests for additional events. */
         live(*jvmti);
@@ -180,7 +183,7 @@ void JNICALL VMDeathCallback(jvmtiEnv *jvmti, JNIEnv *env) {
          *   to be careful that existing threads might be in our own agent
          *   callback code.
          */
-        gdata->vm_is_dead = JNI_TRUE;
+        gdata.vm_is_dead = JNI_TRUE;
 
     }
     exit_critical_section(jvmti);
@@ -259,7 +262,7 @@ void JNICALL ThreadStartCallback(jvmtiEnv *jvmti,
     enter_critical_section(jvmti);
     {
         /* It's possible we get here right after VmDeath event, be careful */
-        if (!gdata->vm_is_dead) {
+        if (!gdata.vm_is_dead) {
             string threadName = get_thread_name(*jvmti, *env, thread);
             std::cout << boost::format("ThreadStart: %s\n") % threadName;
         }
@@ -274,7 +277,7 @@ void JNICALL ThreadEndCallback(jvmtiEnv *jvmti,
     enter_critical_section(jvmti);
     {
         /* It's possible we get here right after VmDeath event, be careful */
-        if (!gdata->vm_is_dead) {
+        if (!gdata.vm_is_dead) {
             string threadName = get_thread_name(*jvmti, *jni, thread);
             std::cout << boost::format("ThreadEnd: %s\n") % threadName;
         }
@@ -291,7 +294,7 @@ void JNICALL ResourceExhaustedCallback(jvmtiEnv *jvmti,
     enter_critical_section(jvmti);
     {
         /* It's possible we get here right after VmDeath event, be careful */
-        if (!gdata->vm_is_dead) {
+        if (!gdata.vm_is_dead) {
             switch (flags) {
                 case JVMTI_RESOURCE_EXHAUSTED_OOM_ERROR:
                     std::cout << boost::format("Out Of Memory Error, %s\n") % description;
@@ -316,12 +319,12 @@ void JNICALL ResourceExhaustedCallback(jvmtiEnv *jvmti,
 
 /* Enter a critical section by doing a JVMTI Raw Monitor Enter */
 void enter_critical_section(jvmtiEnv *jvmti) {
-    jvmtiError error = jvmti->RawMonitorEnter(gdata->lock);
+    jvmtiError error = jvmti->RawMonitorEnter(gdata.lock);
     check_jvmti_error(*jvmti, error, "Cannot enter with raw monitor");
 }
 
 /* Exit a critical section by doing a JVMTI Raw Monitor Exit */
 void exit_critical_section(jvmtiEnv *jvmti) {
-    jvmtiError error = jvmti->RawMonitorExit(gdata->lock);
+    jvmtiError error = jvmti->RawMonitorExit(gdata.lock);
     check_jvmti_error(*jvmti, error, "Cannot exit with raw monitor");
 }                                              

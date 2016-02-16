@@ -25,4 +25,6 @@ void deallocate(jvmtiEnv &jvmti, void *ptr);
 
 void *allocate(jvmtiEnv &jvmti, jint len);
 
+void print_possible_capabilities(jvmtiEnv &jvmti);
+
 #endif // JEFF_NATIVE_AGENT_JVMTI_H

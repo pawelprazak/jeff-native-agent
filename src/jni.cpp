@@ -89,8 +89,10 @@ void __throw_exception(const char *message, const char *expression, const char *
                             % (file == NULL ? "unknown" : file)
                             % line;
 
+    std::cerr << exceptionMessage << std::endl;
+
     JNIEnv *jni;
-    gdata->jvm->AttachCurrentThread((void **) &jni, NULL);  // Get the JNIEnv by attaching to the current thread.
+    jeff::gdata.jvm->AttachCurrentThread((void **) &jni, NULL);  // Get the JNIEnv by attaching to the current thread.
     BOOST_ASSERT_MSG(jni != NULL, "Unable to attach to current thread to get JNIEnv");
 
     jclass type = jni->FindClass(exceptionType);

@@ -45,7 +45,7 @@ jint init(JavaVM *jvm, char *options) {
     gdata.jvm = jvm;
     gdata.jvmti = jvmti;
 
-    print_possible_capabilities(*jvmti);
+    //print_possible_capabilities(*jvmti);
 
     /* Immediately after getting the jvmti* we need to ask for the
      *   capabilities this agent will need. In this case we need to make
@@ -227,9 +227,9 @@ void JNICALL ExceptionCallback(jvmtiEnv *jvmti,
 
     string line = get_location(*jvmti, method, location);
 
-    list<string> stack_traces = get_stack_trace(*jvmti, thread);
+    list<string> stack_trace_entries = get_stack_trace(*jvmti, thread);
     auto join_lines = [](string a, string b) { return "\t" + a + "\n\t" + b; };
-    string stack_trace = std::accumulate(stack_traces.begin(), stack_traces.end(), string(""), join_lines);
+    string stack_trace = std::accumulate(stack_trace_entries.begin(), stack_trace_entries.end(), string(""), join_lines);
 
     std::cout << boost::format("Uncought exception: %s, message: '%s'\n\tin method: %s [%s]\nStack trace:%s\n\n")
                  % exceptionSignature % message % methodName % line % stack_trace;

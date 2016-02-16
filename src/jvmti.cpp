@@ -102,6 +102,18 @@ string get_bytecode_location(jvmtiEnv &jvmti, jmethodID method, jlocation locati
     return ret;
 }
 
+int get_stack_frame_count(jvmtiEnv &jvmti, jthread thread) {
+    jint count_ptr;
+    auto error = jvmti.GetFrameCount(thread, &count_ptr);
+    check_jvmti_error(jvmti, error, "Unable to get stack frame count");
+    return count_ptr;
+}
+
+list<string> get_stack_trace(jvmtiEnv &jvmti, jthread thread) {
+    int depth = get_stack_frame_count(jvmti, thread);
+    return get_stack_trace(jvmti, thread, depth);
+}
+
 list<string> get_stack_trace(jvmtiEnv &jvmti, jthread thread, int depth) {
     unique_ptr<jvmtiFrameInfo[]> frames(new jvmtiFrameInfo[depth]);
     jint count;

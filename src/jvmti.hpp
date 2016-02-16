@@ -15,7 +15,11 @@ std::string get_location(jvmtiEnv &jvmti, jmethodID method, jlocation location);
 
 std::string get_bytecode_location(jvmtiEnv &jvmti, jmethodID method, jlocation location);
 
-std::list<std::string> get_stack_trace(jvmtiEnv &jvmti, jthread thread, int depth = 5);
+int get_stack_frame_count(jvmtiEnv &jvmti, jthread thread);
+
+std::list<std::string> get_stack_trace(jvmtiEnv &jvmti, jthread thread);
+
+std::list<std::string> get_stack_trace(jvmtiEnv &jvmti, jthread thread, int depth);
 
 std::string get_error_name(jvmtiEnv &jvmti, jvmtiError error, const std::string message = "");
 

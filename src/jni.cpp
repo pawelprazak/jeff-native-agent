@@ -32,8 +32,8 @@ jmethodID jeff::get_method_id(JNIEnv &jni, jclass type, const string methodName,
 }
 
 //template<typename R>
-std::wstring jeff::call_method(JNIEnv &jni, jobject &object, const string methodName,
-                    const string methodSignature, std::function<std::wstring(jobject)> transformer, ...) {
+wstring jeff::call_method(JNIEnv &jni, jobject &object, const string methodName,
+                          const string methodSignature, function<wstring(jobject)> transformer, ...) {
     jclass type = get_object_class(jni, object);
     jmethodID methodID = get_method_id(jni, type, methodName, methodSignature);
     delete_local_ref(jni, type);
@@ -48,7 +48,7 @@ std::wstring jeff::call_method(JNIEnv &jni, jobject &object, const string method
 }
 
 jobject jeff::call_method(JNIEnv &jni, jobject &object, const string methodName,
-                               const string methodSignature, ...) {
+                          const string methodSignature, ...) {
     jclass type = get_object_class(jni, object);
     jmethodID methodID = get_method_id(jni, type, methodName, methodSignature);
     delete_local_ref(jni, type);
@@ -85,11 +85,29 @@ wstring jeff::to_wstring(JNIEnv &jni, jstring str) {
     wstring ret;
     ret.assign(chars, chars + len);
 
-    // And finally, release the JNI objects after usage
-//    jni.ReleaseStringChars(str, chars);
+    jni.ReleaseStringChars(str, chars);
     ASSERT_MSG(!jni.ExceptionCheck(), "Unable to release string");
     return ret;
 }
+
+list<bool> jeff::to_list(JNIEnv &jni, jbooleanArray array) {
+    jsize length = jni.GetArrayLength(array);
+    ASSERT_MSG(!jni.ExceptionCheck(), "Unable to get array length");
+
+    jboolean *values = jni.GetBooleanArrayElements(static_cast<jbooleanArray>(array), JNI_FALSE);
+    ASSERT_MSG(!jni.ExceptionCheck(), "Unable to get array elements");
+
+    list<bool> ret;
+    for (jboolean *v = values; v < values + length; v++) {
+        bool value = *v > 0;
+        ret.push_back(value);
+    }
+    jni.ReleaseBooleanArrayElements(static_cast<jbooleanArray>(array), values, JNI_ABORT);
+    ASSERT_MSG(!jni.ExceptionCheck(), "Unable to release array elements");
+
+    return ret;
+}
+
 /*
 std::function<std::wstring(jobject)> jeff::wstring_transformer(JNIEnv &jni) {
     return [jni](jobject result) mutable {

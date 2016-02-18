@@ -3,6 +3,7 @@
 
 #include <jni.h>
 #include <string>
+#include <list>
 #include <functional>
 #include <boost/optional.hpp>
 
@@ -36,6 +37,8 @@ namespace jeff {
     jobject call_method(JNIEnv &jni, jobject &object, jmethodID methodID, ...);
 
     std::wstring to_wstring(JNIEnv &jni, jstring str);
+
+    std::list<bool> to_list(JNIEnv &jni, jbooleanArray array);
 
 //    std::function<std::wstring(jobject)> wstring_transformer(JNIEnv &jni);
 

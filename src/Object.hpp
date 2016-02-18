@@ -3,6 +3,7 @@
 
 #include <jni.h>
 #include <jvmti.h>
+#include <array>
 #include "boost.hpp"
 
 class Type;
@@ -25,7 +26,9 @@ public:
 
     const std::wstring toString() const;
 
-    static std::unique_ptr<Object> from(jvmtiEnv &jvmti, JNIEnv &jni, jarray array);
+    static std::unique_ptr<Object> from(jvmtiEnv &jvmti, JNIEnv &jni, jbooleanArray array, std::string signature);
+
+    static std::unique_ptr<Object> from(jvmtiEnv &jvmti, JNIEnv &jni, jarray array, std::string signature);
 
     static std::unique_ptr<Object> from(jvmtiEnv &jvmti, JNIEnv &jni, jobject object);
 

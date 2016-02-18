@@ -82,53 +82,61 @@ string jeff::get_method_name(jvmtiEnv &jvmti, jmethodID method) {
 
 unique_ptr<Object> jeff::get_local_value(jvmtiEnv &jvmti, JNIEnv &jni, jthread thread, int depth, int slot,
                                          string signature) {
+    unsigned long length = signature.length();
+    ASSERT_MSG(length >= 0 || length <= 1, (format("Invalid signature: %s") % signature).str().c_str());
 
-    std::cout << "jeff::get_local_value: " << get_thread_name(jvmti, jni, thread) << " " << depth << " " << slot <<
-    " " << signature << endl;
     jvmtiError error;
     switch (signature.c_str()[0]) {
-        case 'Z':   /* boolean */
+        case 'Z': {  /* boolean */
             jint bool_value;
             error = jvmti.GetLocalInt(thread, depth, slot, &bool_value);
             ASSERT_JVMTI_MSG(error, "Unable to get local value");
             return Object::from(jvmti, jni, bool_value > 0);
-        case 'C':   /* char */
+        }
+        case 'C': {  /* char */
             jint char_value;
             error = jvmti.GetLocalInt(thread, depth, slot, &char_value);
             ASSERT_JVMTI_MSG(error, "Unable to get local value");
             return Object::from(jvmti, jni, (jchar) char_value);
-        case 'B':   /* byte */
+        }
+        case 'B': {  /* byte */
             jint byte_value;
             error = jvmti.GetLocalInt(thread, depth, slot, &byte_value);
             ASSERT_JVMTI_MSG(error, "Unable to get local value");
             return Object::from(jvmti, jni, (jbyte) byte_value);
-        case 'S':   /* short */
+        }
+        case 'S': {  /* short */
             jint short_value;
             error = jvmti.GetLocalInt(thread, depth, slot, &short_value);
             ASSERT_JVMTI_MSG(error, "Unable to get local value");
             return Object::from(jvmti, jni, (jshort) short_value);
-        case 'I':   /* int */
+        }
+        case 'I': {  /* int */
             jint int_value;
             error = jvmti.GetLocalInt(thread, depth, slot, &int_value);
             ASSERT_JVMTI_MSG(error, "Unable to get local value");
             return Object::from(jvmti, jni, int_value);
-        case 'J':   /* long */
+        }
+        case 'J': {  /* long */
             jlong long_value;
             error = jvmti.GetLocalLong(thread, depth, slot, &long_value);
             ASSERT_JVMTI_MSG(error, "Unable to get local value");
             return Object::from(jvmti, jni, long_value);
-        case 'F':   /* float */
+        }
+        case 'F': {  /* float */
             jfloat float_value;
             error = jvmti.GetLocalFloat(thread, depth, slot, &float_value);
             ASSERT_JVMTI_MSG(error, "Unable to get local value");
             ASSERT_MSG(sizeof(float) == 32, "size of float is: " + sizeof(float));
             return Object::from(jvmti, jni, float_value);
-        case 'D':   /* double */
+        }
+        case 'D': {  /* double */
             jdouble double_value;
             error = jvmti.GetLocalDouble(thread, depth, slot, &double_value);
             ASSERT_JVMTI_MSG(error, "Unable to get local value");
             ASSERT_MSG(sizeof(double) == 64, "size of double is: " + sizeof(double));
             return Object::from(jvmti, jni, double_value);
+        }
         case 'L': {  /* Object */
             jobject object_value;
             error = jvmti.GetLocalObject(thread, depth, slot, &object_value);
@@ -137,12 +145,35 @@ unique_ptr<Object> jeff::get_local_value(jvmtiEnv &jvmti, JNIEnv &jni, jthread t
             jni.DeleteLocalRef(object_value);
             return ret;
         }
-        case '[': {   /* Array */
+        case '[': {  /* Array */
             jobject array_value;
             error = jvmti.GetLocalObject(thread, depth, slot, &array_value);
             ASSERT_JVMTI_MSG(error, "Unable to get local value");
-            auto ret = Object::from(jvmti, jni, (jarray) array_value);
+
+            auto ret = unique_ptr<Object>();
+
+            switch(signature[1]) {
+                case 'Z': {
+                    ret = Object::from(jvmti, jni, (jbooleanArray) array_value, signature);
+                    break;
+                }
+                // TODO all types
+
+                case 'L': {
+                    // TODO ...
+//                    string elementSignature = signature.substr(1, signature.length());
+//                    jclass elementClass = find_class(jni, elementSignature);
+//                    ...
+//                    ret = Object::from(jvmti, jni, (jobjectArray) array_value, signature);
+//                    break;
+                }
+                default: {
+                    ret = Object::from(jvmti, jni, (jarray) array_value, signature);
+                }
+            }
             jni.DeleteLocalRef(array_value);
+            ASSERT_MSG(!jni.ExceptionCheck(), "Unable to release local reference");
+
             return ret;
         }
         default: {

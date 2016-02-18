@@ -1,6 +1,7 @@
 #include "common.hpp"
 #include <locale>
 #include <vector>
+#include <algorithm>
 
 using namespace std;
 
@@ -10,6 +11,17 @@ string jeff::join(list<string> entries, function<string(string, string)> join_li
 
 string jeff::join(list<string> entries, string start, function<string(string, string)> join_lines) {
     return accumulate(entries.begin(), entries.end(), start, join_lines);
+}
+
+string jeff::join(list<bool> entries, function<string(string, string)> join_values) {
+    return join(entries, string(""), join_values);
+}
+
+string jeff::join(list<bool> entries, string start, function<string(string, string)> join_values) {
+    function<string(bool)> transform_values = [](bool b) -> string { return (b == 0) ? "false" : "true";};
+    list<string> values;
+    transform(entries.begin(), entries.end(), back_inserter(values), transform_values);
+    return join(values, start, join_values);
 }
 
 wstring jeff::L(const string &str) {

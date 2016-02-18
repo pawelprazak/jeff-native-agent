@@ -4,10 +4,10 @@ public class Main {
 
     public static void testMethod(String test1, int test2, long test3, byte test4, boolean test5) {
         System.out.printf("TEST METHOD %s %s %s %s %s%n", test1, test2, test3, test4, test5);
-        Main.testMethod2();
+        Main.testMethod2(new boolean[] { true, false, false, true });
     }
 
-    public static void testMethod2() {
+    public static void testMethod2(boolean[] array1) {
         String msg = "Test exception";
         Main.throwingMethod(msg);
     }

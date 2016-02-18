@@ -2,6 +2,7 @@
 #include "Type.hpp"
 #include "jni.hpp"
 #include "jvmti.hpp"
+#include "common.hpp"
 
 using namespace std;
 using namespace boost;
@@ -24,30 +25,30 @@ const Type Object::getType() const {
     return *type;
 }
 
-const std::wstring Object::toString() const {
+const wstring Object::toString() const {
     return to_string;
 }
 
-unique_ptr<Object> Object::from(jvmtiEnv &jvmti, JNIEnv &jni, jarray array) {
-    jclass type = get_object_class(jni, array);
-    std::string signature = get_class_signature(jvmti, type);
+unique_ptr<Object> Object::from(jvmtiEnv &jvmti, JNIEnv &jni, jbooleanArray array, string signature) {
+    list<bool> values = to_list(jni, array);
+    wstring as_string = L(
+            join(values, [](string a, string b) -> string { return a + ", " + b; })
+    );
 
+    Object *ret = new Object(Type::from(jvmti, jni, signature), as_string);
+    return unique_ptr<Object>(ret);
+}
+
+unique_ptr<Object> Object::from(jvmtiEnv &jvmti, JNIEnv &jni, jarray array, string signature) {
     // TODO
     wstring as_string = L"[not implemented yet]";
 
     Object *ret = new Object(Type::from(jvmti, jni, signature), as_string);
-    jni.DeleteLocalRef(type);
     return unique_ptr<Object>(ret);
 }
 
 unique_ptr<Object> Object::from(jvmtiEnv &jvmti, JNIEnv &jni, jobject object) {
     jclass type = get_object_class(jni, object);
-
-//    std::function<wstring(jobject)> wstring_transformer = [jni](jobject result) mutable {
-//        return (result == nullptr) ? L"" : jeff::to_wstring(jni, static_cast<jstring>(result));
-//    };
-//    wstring as_string = call_method(jni, object, "toString", "()Ljava/lang/String;", wstring_transformer);
-//    wstring as_string = call_method(jni, object, "toString", "()Ljava/lang/String;", wstring_transformer(jni));
 
     jobject result = call_method(jni, object, "toString", "()Ljava/lang/String;");
     wstring as_string = (result == nullptr) ? L"" : jeff::to_wstring(jni, static_cast<jstring>(result));

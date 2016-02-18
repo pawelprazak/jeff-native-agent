@@ -25,13 +25,13 @@ namespace jeff {
 
     int get_method_arguments_size(jvmtiEnv &jvmti, jmethodID method);
 
-    std::list<std::string> get_method_arguments(jvmtiEnv &jvmti, JNIEnv &jni, jthread thread, jmethodID method);
+    std::list<std::string> get_method_arguments(jvmtiEnv &jvmti, JNIEnv &jni, jthread thread, jmethodID method, int depth);
 
     std::unique_ptr<Object> get_local_value(jvmtiEnv &jvmti, JNIEnv &jni, jthread thread, int depth, int slot,
                                             std::string signature);
 
     std::list<std::string> get_method_local_variables(jvmtiEnv &jvmti, JNIEnv &jni, jthread thread,
-                                                      jmethodID method, int limit);
+                                                      jmethodID method, int limit, int depth);
 
     std::string get_thread_name(jvmtiEnv &jvmti, JNIEnv &jni, jthread thread);
 

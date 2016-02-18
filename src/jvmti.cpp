@@ -90,7 +90,7 @@ unique_ptr<Object> jeff::get_local_value(jvmtiEnv &jvmti, JNIEnv &jni, jthread t
         case 'Z':   /* boolean */
             jint bool_value;
             error = jvmti.GetLocalInt(thread, depth, slot, &bool_value);
-            //ASSERT_JVMTI_MSG(error, "Unable to get local value");
+            ASSERT_JVMTI_MSG(error, "Unable to get local value");
             return Object::from(jvmti, jni, bool_value > 0);
         case 'C':   /* char */
             jint char_value;
@@ -154,7 +154,7 @@ unique_ptr<Object> jeff::get_local_value(jvmtiEnv &jvmti, JNIEnv &jni, jthread t
 }
 
 list<string> jeff::get_method_local_variables(jvmtiEnv &jvmti, JNIEnv &jni, jthread thread, jmethodID method,
-                                              int limit) {
+                                              int limit, int depth) {
     jint size;
     jvmtiLocalVariableEntry *entries;
 
@@ -170,7 +170,6 @@ list<string> jeff::get_method_local_variables(jvmtiEnv &jvmti, JNIEnv &jni, jthr
         string name = string(entry->name);
         string signature = entry->signature;
         int slot = entry->slot;
-        int depth = i;
 
         unique_ptr<Object> value = get_local_value(jvmti, jni, thread, depth, slot, signature);
 
@@ -195,10 +194,10 @@ int jeff::get_method_arguments_size(jvmtiEnv &jvmti, jmethodID method) {
     return size;
 }
 
-list<string> jeff::get_method_arguments(jvmtiEnv &jvmti, JNIEnv &jni, jthread thread, jmethodID method) {
+list<string> jeff::get_method_arguments(jvmtiEnv &jvmti, JNIEnv &jni, jthread thread, jmethodID method, int depth) {
     list<string> lines;
     int size = get_method_arguments_size(jvmti, method);
-    list<string> variables = get_method_local_variables(jvmti, jni, thread, method, size);
+    list<string> variables = get_method_local_variables(jvmti, jni, thread, method, size, depth);
     size = min(size, (int) variables.size());
     for (size_t i = 0; i < size; i++) {
         lines.push_back(variables.front());
@@ -299,7 +298,7 @@ list<string> jeff::get_stack_trace(jvmtiEnv &jvmti, JNIEnv &jni, jthread thread,
         auto frame = frames[i];
         string method_name = get_method_name(jvmti, frame.method);
 
-        list<string> args = get_method_arguments(jvmti, jni, thread, frame.method);
+        list<string> args = get_method_arguments(jvmti, jni, thread, frame.method, i);
         auto join_lines = [](string a, string b) { return a + ", " + b; };
         string arguments_values = join(args, join_lines);
 

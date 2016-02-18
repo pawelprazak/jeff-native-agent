@@ -80,6 +80,7 @@ include_directories(${Boost_INCLUDE_DIRS})
 set(SOURCE_FILES
         src/boost.hpp
         src/GlobalAgentData.hpp src/GlobalAgentData.cpp
+        src/common.cpp src/common.hpp
         src/main.cpp src/main.hpp
         src/jvmti.cpp src/jvmti.hpp
         src/jni.cpp src/jni.hpp

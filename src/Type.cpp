@@ -2,23 +2,25 @@
 #include "jvmti.hpp"
 #include "Type.hpp"
 
-Type::Type(jvmtiEnv &jvmti, JNIEnv &jni, jclass type)
-        : Object(jvmti, jni, type), jvmti(jvmti), jni(jni), type(type) {
+using namespace jeff;
 
+Type::Type(const std::string signature)
+        : signature(signature) {
+    // Empty
 }
 
 Type::~Type() {
-    jni.DeleteLocalRef(type);
+    // Empty
 }
 
 const std::string Type::getSignature() const {
-    char *signature;
-    jvmtiError error = jvmti.GetClassSignature(type, &signature, NULL);
-    check_jvmti_error(jvmti, error, "Unable to get class signature.");
+    return signature;
+}
 
-    std::stringstream stream;
-    stream << signature;
-    deallocate(jvmti, signature);
+const Type *const Type::from(jvmtiEnv &jvmti, JNIEnv &jni, std::string signature) {
+    return new Type(signature);
+}
 
-    return stream.str();
+const Type *const Type::from(jvmtiEnv &jvmti, JNIEnv &jni, char primitive_signature) {
+    return new Type(std::string(1, primitive_signature));
 }

@@ -9,77 +9,109 @@ using namespace boost;
 /**
  * Remember to use jni.DeleteLocalRef
  */
-jclass get_object_class(JNIEnv &jni, jobject object) {
+jclass jeff::find_class(JNIEnv &jni, string name) {
+    jclass type = jni.FindClass(name.c_str());
+    ASSERT_MSG(!jni.ExceptionCheck(), "Unable to find class");
+    return type;
+}
+
+/**
+ * Remember to use jni.DeleteLocalRef
+ */
+jclass jeff::get_object_class(JNIEnv &jni, jobject object) {
     jclass type = jni.GetObjectClass(object);
     ASSERT_MSG(!jni.ExceptionCheck(), "Unable to get object class");
     return type;
 }
 
-jmethodID get_method_id(JNIEnv &jni, const jclass type, const string methodName, const string returnSignature) {
+jmethodID jeff::get_method_id(JNIEnv &jni, jclass type, const string methodName, const string returnSignature) {
     jmethodID methodID = jni.GetMethodID(type, methodName.c_str(), returnSignature.c_str());
     ASSERT_MSG(!jni.ExceptionCheck(), "Unable to get method ID");
+    ASSERT_MSG(methodID != 0, "Expected non-zero method ID");
     return methodID;
 }
 
-jobject call_method(JNIEnv &jni, const jclass type, jmethodID methodID, ...) {
+//template<typename R>
+std::wstring jeff::call_method(JNIEnv &jni, jobject &object, const string methodName,
+                    const string methodSignature, std::function<std::wstring(jobject)> transformer, ...) {
+    jclass type = get_object_class(jni, object);
+    jmethodID methodID = get_method_id(jni, type, methodName, methodSignature);
+    delete_local_ref(jni, type);
+
+    va_list args;
+    jobject result;
+    va_start(args, transformer);
+    result = call_method(jni, object, methodID, args);
+    va_end(args);
+
+    return transformer(result);
+}
+
+jobject jeff::call_method(JNIEnv &jni, jobject &object, const string methodName,
+                               const string methodSignature, ...) {
+    jclass type = get_object_class(jni, object);
+    jmethodID methodID = get_method_id(jni, type, methodName, methodSignature);
+    delete_local_ref(jni, type);
+
+    va_list args;
+    jobject result;
+    va_start(args, methodSignature);
+    result = call_method(jni, object, methodID, args);
+    va_end(args);
+
+    return result;
+}
+
+jobject jeff::call_method(JNIEnv &jni, jobject &object, jmethodID methodID, ...) {
     va_list args;
     jobject result;
     va_start(args, methodID);
-    result = jni.CallObjectMethodV(type, methodID, args);
+    result = jni.CallObjectMethodV(object, methodID, args);
+
     ASSERT_MSG(!jni.ExceptionCheck(), "Unable to call method");
     va_end(args);
     return result;
 }
 
-optional<jobject> call_method(JNIEnv &jni, const jobject object, const string methodName,
-                              const string returnSignature, ...) {
-    // Get the object's class
-    jclass type = get_object_class(jni, object);
-
-    va_list args;
-    jobject result;
-    va_start(args, returnSignature);
-    jmethodID methodID = get_method_id(jni, type, methodName, returnSignature);
-    result = call_method(jni, type, methodID, args);
-    va_end(args);
-
-    delete_local_ref(jni, type);
-
-    if (result == NULL) {
-        return boost::none;
-    } else {
-        return result;
-    }
-}
-
-string to_string(JNIEnv &jni, jstring str) {
+wstring jeff::to_wstring(JNIEnv &jni, jstring str) {
     // Convert to native char array
-    const char *chars = jni.GetStringUTFChars(str, 0);
+    const jchar *chars = jni.GetStringChars(str, JNI_FALSE);
+    ASSERT_MSG(!jni.ExceptionCheck(), "Unable to get string");
+    ASSERT_MSG(chars != nullptr, "Expected non-null pointer");
 
-    // Convert to string
-    auto ret = format("%s") % chars;
+    jsize len = jni.GetStringLength(str);
+    ASSERT_MSG(!jni.ExceptionCheck(), "Unable to get string length");
+
+    wstring ret;
+    ret.assign(chars, chars + len);
 
     // And finally, release the JNI objects after usage
-    jni.ReleaseStringUTFChars(str, chars);
+//    jni.ReleaseStringChars(str, chars);
     ASSERT_MSG(!jni.ExceptionCheck(), "Unable to release string");
-
-    return ret.str();
+    return ret;
 }
+/*
+std::function<std::wstring(jobject)> jeff::wstring_transformer(JNIEnv &jni) {
+    return [jni](jobject result) mutable {
+        return (result == nullptr) ? L"" : jeff::to_wstring(jni, static_cast<jstring>(result));
+    };
+}
+*/
 
-void delete_local_ref(JNIEnv &jni, const jclass type) {
+void jeff::delete_local_ref(JNIEnv &jni, jclass type) {
     jni.DeleteLocalRef(type);
     ASSERT_MSG(!jni.ExceptionCheck(), "Unable to delete local reference");
 }
 
 /**
- * Use THROW_JAVA_EXCEPTION macro.
+ * Use ASSERT_MSG macro.
  *
  * JNI specification 6.1.1:
  * A pending exception raised through the JNI (by calling ThrowNew, for example) does not immediately disrupt
  * the native method execution. JNI programmers must explicitly implement the control flow after an exception has occurred.
  */
-void __throw_exception(const char *message, const char *expression, const char *exceptionType,
-                       const char *function, const char *file, int line) {
+void jeff::__throw_exception(const char *message, const char *expression, const char *exceptionType,
+                             const char *function, const char *file, int line) {
     BOOST_ASSERT_MSG(exceptionType != NULL, "Expected non-null exceptionType");
 
     auto exceptionMessage = format("JNIException (%s): '%s' %s\n\t%s (%s:%s)")
@@ -89,7 +121,7 @@ void __throw_exception(const char *message, const char *expression, const char *
                             % (file == NULL ? "unknown" : file)
                             % line;
 
-    std::cerr << exceptionMessage << std::endl;
+    std::cerr << exceptionMessage << std::endl << std::endl;
 
     JNIEnv *jni;
     jeff::gdata.jvm->AttachCurrentThread((void **) &jni, NULL);  // Get the JNIEnv by attaching to the current thread.
@@ -103,8 +135,10 @@ void __throw_exception(const char *message, const char *expression, const char *
     jni->DeleteLocalRef(type);
 }
 
-
-void __throw_exception(const char *message, const char *exceptionType,
-                       const char *function, const char *file, int line) {
+/**
+ * Use THROW_JAVA_EXCEPTION macro.
+ */
+void jeff::__throw_exception(const char *message, const char *exceptionType,
+                             const char *function, const char *file, int line) {
     __throw_exception(message, NULL, exceptionType, function, file, line);
 }

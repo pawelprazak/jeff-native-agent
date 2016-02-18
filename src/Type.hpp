@@ -8,18 +8,21 @@
 class Type : Object {
 
 public:
-    Type(jvmtiEnv &jvmti, JNIEnv &jni, jclass type);
+    Type() { }
+
+    Type(const std::string signature);
 
     virtual ~Type();
 
 private:
-    jvmtiEnv &jvmti;
-    JNIEnv &jni;
-    jclass type;
+    const std::string signature;
 
 public:
-    const std::string getSignature() const;
+    static const Type *const from(jvmtiEnv &jvmti, JNIEnv &jni, std::string signature);
 
+    static const Type *const from(jvmtiEnv &jvmti, JNIEnv &jni, char primitive_signature);
+
+    const std::string getSignature() const;
 };
 
 #endif //JEFF_NATIVE_AGENT_TYPE_HPP

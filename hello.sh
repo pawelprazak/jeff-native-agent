@@ -65,6 +65,9 @@ if [ ${VALGRIND} == YES ]; then
     VALGRIND_COMMAND="valgrind -v --leak-check=yes --suppressions=valgrind.supp"
 fi
 
+# Java Core Dumps
+#ulimit -c unlimited
+
 # Run java with options:
 # - neutralize penalty imposed by 64 bit JVM (HotSpot)
 # - optimize the JVM for short-runnning applications
@@ -74,7 +77,6 @@ fi
 ${VALGRIND_COMMAND} java -showversion \
     -XX:+UseCompressedOops \
     -XX:+TieredCompilation -XX:TieredStopAtLevel=1 \
-    -verbose:jni \
     -agentpath:${JEFF_PATH} \
     -jar ${JAR_PATH} > ${LOG_PATH}
 

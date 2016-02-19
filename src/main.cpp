@@ -170,7 +170,7 @@ void JNICALL VMInitCallback(jvmtiEnv *jvmti, JNIEnv *env, jthread thread) {
         jint err = live(*jvmti);
         ASSERT_MSG(err == JVMTI_ERROR_NONE, (boost::format("live() returned an error '%s'") % err).str().c_str());
 
-        gdata.sender = Sender::create("localhost", "8181");
+        gdata.sender = Sender::create("localhost", "9999");
     }
     exit_critical_section(jvmti);
 }

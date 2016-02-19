@@ -169,6 +169,8 @@ void JNICALL VMInitCallback(jvmtiEnv *jvmti, JNIEnv *env, jthread thread) {
         /* The VM is now initialized, at this time we make our requests for additional events. */
         jint err = live(*jvmti);
         ASSERT_MSG(err == JVMTI_ERROR_NONE, (boost::format("live() returned an error '%s'") % err).str().c_str());
+
+        gdata.sender = Sender::create("localhost", "8181");
     }
     exit_critical_section(jvmti);
 }
@@ -193,6 +195,7 @@ void JNICALL VMDeathCallback(jvmtiEnv *jvmti, JNIEnv *env) {
          */
         gdata.vm_is_dead = JNI_TRUE;
 
+        if (gdata.sender != nullptr) gdata.sender->stop();
     }
     exit_critical_section(jvmti);
 }

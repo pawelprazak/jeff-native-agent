@@ -86,7 +86,7 @@ set(SOURCE_FILES
         src/jni.cpp src/jni.hpp
         src/Object.cpp src/Object.hpp
         src/Type.cpp src/Type.hpp
-)
+        src/Sender.cpp src/Sender.h)
 add_library(jeff-native-agent SHARED ${SOURCE_FILES})
 
 target_link_libraries(jeff-native-agent ${Boost_LIBRARIES})

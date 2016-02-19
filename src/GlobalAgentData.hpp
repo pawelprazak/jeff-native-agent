@@ -3,6 +3,7 @@
 
 #include <jni.h>
 #include <jvmti.h>
+#include "Sender.h"
 
 namespace jeff {
 
@@ -15,6 +16,8 @@ namespace jeff {
         jboolean vm_is_started;
         /* Data access Lock */
         jrawMonitorID lock;
+        /* Networking */
+        std::unique_ptr<Sender> sender;
     } GlobalAgentData;
 
     extern GlobalAgentData gdata;

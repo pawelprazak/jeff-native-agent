@@ -27,20 +27,20 @@ namespace jeff {
 
     jmethodID get_method_id(JNIEnv &jni, jclass type, const std::string methodName,
                             const std::string returnSignature);
-//    template<typename R>
-    std::wstring call_method(JNIEnv &jni, jobject &object, const std::string methodName,
-                  const std::string methodSignature, std::function<std::wstring(jobject)> transformer, ...);
+
+    std::string call_method(JNIEnv &jni, jobject &object, const std::string methodName,
+                  const std::string methodSignature, std::function<std::string(jobject)> transformer, ...);
 
     jobject call_method(JNIEnv &jni, jobject &object, const std::string methodName,
                               const std::string methodSignature, ...);
 
     jobject call_method(JNIEnv &jni, jobject &object, jmethodID methodID, ...);
 
+    std::string to_string(JNIEnv &jni, jstring str);
+
     std::wstring to_wstring(JNIEnv &jni, jstring str);
 
     std::list<bool> to_list(JNIEnv &jni, jbooleanArray array);
-
-//    std::function<std::wstring(jobject)> wstring_transformer(JNIEnv &jni);
 
     void delete_local_ref(JNIEnv &jni, jclass type);
 

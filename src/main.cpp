@@ -147,10 +147,13 @@ void JNICALL VMStartCallback(jvmtiEnv *jvmti, JNIEnv *env) {
     enter_critical_section(jvmti);
     {
         /* The VM has started. */
-        std::cout << "VM Started (JVMTI_EVENT_VM_START)" << endl;
+        std::string message = "VM Started (JVMTI_EVENT_VM_START)";
+        std::cout << message << endl;
 
         /* Indicate VM has started */
         gdata.vm_is_started = JNI_TRUE;
+        gdata.sender = Sender::create("localhost", "9999");
+        gdata.sender->send(message);
     }
     exit_critical_section(jvmti);
 }
@@ -161,7 +164,8 @@ void JNICALL VMInitCallback(jvmtiEnv *jvmti, JNIEnv *env, jthread thread) {
     {
         /* The VM has started. */
         string threadName = get_thread_name(*jvmti, *env, thread);
-        std::cout << boost::format("VMInit thread '%s' (JVMTI_EVENT_VM_INIT)\n") % threadName;
+        auto message = boost::format("VMInit thread '%s' (JVMTI_EVENT_VM_INIT)\n") % threadName;
+        std::cout << message;
 
         /* Indicate VM has initialized */
         gdata.vm_is_initialized = JNI_TRUE;
@@ -170,7 +174,7 @@ void JNICALL VMInitCallback(jvmtiEnv *jvmti, JNIEnv *env, jthread thread) {
         jint err = live(*jvmti);
         ASSERT_MSG(err == JVMTI_ERROR_NONE, (boost::format("live() returned an error '%s'") % err).str().c_str());
 
-        gdata.sender = Sender::create("localhost", "9999");
+        gdata.sender->send(message.str());
     }
     exit_critical_section(jvmti);
 }
@@ -180,7 +184,8 @@ void JNICALL VMDeathCallback(jvmtiEnv *jvmti, JNIEnv *env) {
     enter_critical_section(jvmti);
     {
         /* The VM has died. */
-        std::cout << "VM Died (JVMTI_EVENT_VM_DEATH)\n";
+        std::string message = "VM Died (JVMTI_EVENT_VM_DEATH)\n";
+        std::cout << message;
 
         /* The critical section here is important to hold back the VM death
          *    until all other callbacks have completed.
@@ -195,7 +200,11 @@ void JNICALL VMDeathCallback(jvmtiEnv *jvmti, JNIEnv *env) {
          */
         gdata.vm_is_dead = JNI_TRUE;
 
-        if (gdata.sender != nullptr) gdata.sender->stop();
+        if (gdata.sender != nullptr) {
+            gdata.sender->send(message);
+            gdata.sender->flush();
+            gdata.sender->stop();
+        }
     }
     exit_critical_section(jvmti);
 }
@@ -233,19 +242,22 @@ void JNICALL ExceptionCallback(jvmtiEnv *jvmti,
     unique_ptr<Object> object = Object::from(*jvmti, *jni, exception);
     string exceptionSignature = object->getType().getSignature();
 
-    std::function<wstring(jobject)> wstring_transformer = [jni](jobject result) mutable {
-        return (result == nullptr) ? L"" : jeff::to_wstring(*jni, static_cast<jstring>(result));
+    std::function<string(jobject)> string_transformer = [jni](jobject result) mutable {
+        return (result == nullptr) ? "" : jeff::to_string(*jni, static_cast<jstring>(result));
     };
-    wstring message = call_method(*jni, exception, "getMessage", "()Ljava/lang/String;", wstring_transformer);
-//    wstring message = call_method(*jni, exception, "getMessage", "()Ljava/lang/String;", wstring_transformer(*jni));
+    string message = call_method(*jni, exception, "getMessage", "()Ljava/lang/String;", string_transformer);
 
     string line = get_location(*jvmti, method, location);
 
     auto join_lines = [](string a, string b) { return "\t" + a + "\n\t" + b; };
     string stack_trace = join(get_stack_trace(*jvmti, *jni, thread), join_lines);
 
-    std::wcout << boost::wformat(L"Uncought exception: %s, message: '%s'\n\tin method: %s [%s]\nStack trace:%s\n\n")
-                  % L(exceptionSignature) % message % L(methodName) % L(line) % L(stack_trace);
+    auto the_message =
+            boost::format("Uncought exception: %s, message: '%s'\n\tin method: %s [%s]\nStack trace:%s\n\n")
+            % exceptionSignature % message % methodName % line % stack_trace;
+    std::cout << the_message;
+
+    gdata.sender->send(the_message.str());
 }
 
 void JNICALL ExceptionCatchCallback(jvmtiEnv *jvmti,
@@ -260,15 +272,17 @@ void JNICALL ExceptionCatchCallback(jvmtiEnv *jvmti,
     unique_ptr<Object> object = Object::from(*jvmti, *jni, exception);
     string exceptionSignature = object->getType().getSignature();
 
-    std::function<wstring(jobject)> wstring_transformer = [jni](jobject result) mutable {
-        return (result == nullptr) ? L"" : jeff::to_wstring(*jni, static_cast<jstring>(result));
+    std::function<string(jobject)> string_transformer = [jni](jobject result) mutable {
+        return (result == nullptr) ? "" : jeff::to_string(*jni, static_cast<jstring>(result));
     };
-    wstring message = call_method(*jni, exception, "getMessage", "()Ljava/lang/String;", wstring_transformer);
-//    wstring message = call_method(*jni, exception, "getMessage", "()Ljava/lang/String;", wstring_transformer(*jni));
+    string message = call_method(*jni, exception, "getMessage", "()Ljava/lang/String;", string_transformer);
     string line = get_location(*jvmti, method, location);
 
-    std::wcout << boost::wformat(L"Cought exception: %s, message: '%s'\n\tin method: %s [%s]\n")
-                  % L(exceptionSignature) % message % L(methodName) % L(line);
+    auto the_message = boost::format("Cought exception: %s, message: '%s'\n\tin method: %s [%s]\n")
+                       % exceptionSignature % message % methodName % line;
+    std::cout << the_message;
+
+    gdata.sender->send(the_message.str());
 }
 
 void JNICALL ThreadStartCallback(jvmtiEnv *jvmti,
@@ -285,7 +299,6 @@ void JNICALL ThreadStartCallback(jvmtiEnv *jvmti,
     exit_critical_section(jvmti);
 }
 
-
 void JNICALL ThreadEndCallback(jvmtiEnv *jvmti,
                                JNIEnv *jni,
                                jthread thread) {
@@ -300,9 +313,8 @@ void JNICALL ThreadEndCallback(jvmtiEnv *jvmti,
     exit_critical_section(jvmti);
 }
 
-
 void JNICALL ResourceExhaustedCallback(jvmtiEnv *jvmti,
-                                       JNIEnv *env,
+                                       JNIEnv *jni,
                                        jint flags,
                                        const void *reserved,
                                        const char *description) {
@@ -310,20 +322,27 @@ void JNICALL ResourceExhaustedCallback(jvmtiEnv *jvmti,
     {
         /* It's possible we get here right after VmDeath event, be careful */
         if (!gdata.vm_is_dead) {
+            std::string message;
             switch (flags) {
-                case JVMTI_RESOURCE_EXHAUSTED_OOM_ERROR:
-                    std::cout << boost::format("Out Of Memory Error, %s\n") % description;
+                case JVMTI_RESOURCE_EXHAUSTED_OOM_ERROR: {
+                    message = (boost::format("VM died: Out Of Memory Error, %s\n") % description).str();
                     break;
-                case JVMTI_RESOURCE_EXHAUSTED_JAVA_HEAP:
-                    std::cout << boost::format("Exhausted Java Heap, %s\n") % description;
+                }
+                case JVMTI_RESOURCE_EXHAUSTED_JAVA_HEAP: {
+                    message = (boost::format("VM died: Exhausted Java Heap, %s\n") % description).str();
                     break;
-                case JVMTI_RESOURCE_EXHAUSTED_THREADS:
-                    std::cout << boost::format("Exhausted threads, %s\n") % description;
+                }
+                case JVMTI_RESOURCE_EXHAUSTED_THREADS: {
+                    message = (boost::format("VM died: Exhausted threads, %s\n") % description).str();
                     break;
-                default:
-                    std::cout << boost::format("Unknown, %s\n") % description;
+                }
+                default: {
+                    message = (boost::format("VM died: Unknown, %s\n") % description).str();
                     break;
+                }
             }
+            std::cout << message;
+            gdata.sender->send(message);
         }
     }
     exit_critical_section(jvmti);

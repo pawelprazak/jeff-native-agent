@@ -71,7 +71,7 @@ endif ()
 set(Boost_USE_STATIC_LIBS NO)
 set(Boost_USE_STATIC_RUNTIME ON)
 set(Boost_USE_MULTITHREADED ON)
-find_package(Boost 1.46.0 REQUIRED COMPONENTS system)
+find_package(Boost 1.46.0 REQUIRED COMPONENTS system thread)
 add_definitions(${Boost_LIB_DIAGNOSTIC_DEFINITIONS})
 include_directories(${Boost_INCLUDE_DIRS})
 
@@ -86,7 +86,8 @@ set(SOURCE_FILES
         src/jni.cpp src/jni.hpp
         src/Object.cpp src/Object.hpp
         src/Type.cpp src/Type.hpp
-        src/Sender.cpp src/Sender.h)
+        src/Sender.cpp src/Sender.h
+)
 add_library(jeff-native-agent SHARED ${SOURCE_FILES})
 
 target_link_libraries(jeff-native-agent ${Boost_LIBRARIES})

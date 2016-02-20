@@ -31,9 +31,8 @@ jmethodID jeff::get_method_id(JNIEnv &jni, jclass type, const string methodName,
     return methodID;
 }
 
-//template<typename R>
-wstring jeff::call_method(JNIEnv &jni, jobject &object, const string methodName,
-                          const string methodSignature, function<wstring(jobject)> transformer, ...) {
+string jeff::call_method(JNIEnv &jni, jobject &object, const string methodName,
+                          const string methodSignature, function<string(jobject)> transformer, ...) {
     jclass type = get_object_class(jni, object);
     jmethodID methodID = get_method_id(jni, type, methodName, methodSignature);
     delete_local_ref(jni, type);
@@ -71,6 +70,23 @@ jobject jeff::call_method(JNIEnv &jni, jobject &object, jmethodID methodID, ...)
     ASSERT_MSG(!jni.ExceptionCheck(), "Unable to call method");
     va_end(args);
     return result;
+}
+
+string jeff::to_string(JNIEnv &jni, jstring str) {
+    // Convert to native char array
+    const char *chars = jni.GetStringUTFChars(str, JNI_FALSE);
+    ASSERT_MSG(!jni.ExceptionCheck(), "Unable to get string");
+    ASSERT_MSG(chars != nullptr, "Expected non-null pointer");
+
+    jsize len = jni.GetStringLength(str);
+    ASSERT_MSG(!jni.ExceptionCheck(), "Unable to get string length");
+
+    string ret;
+    ret.assign(chars, chars + len);
+
+    jni.ReleaseStringUTFChars(str, chars);
+    ASSERT_MSG(!jni.ExceptionCheck(), "Unable to release string");
+    return ret;
 }
 
 wstring jeff::to_wstring(JNIEnv &jni, jstring str) {
@@ -114,6 +130,10 @@ std::function<std::wstring(jobject)> jeff::wstring_transformer(JNIEnv &jni) {
         return (result == nullptr) ? L"" : jeff::to_wstring(jni, static_cast<jstring>(result));
     };
 }
+
+std::function<wstring(jobject)> wstring_transformer = [jni](jobject result) mutable {
+    return (result == nullptr) ? L"" : jeff::to_wstring(*jni, static_cast<jstring>(result));
+};
 */
 
 void jeff::delete_local_ref(JNIEnv &jni, jclass type) {

@@ -72,7 +72,7 @@ void Sender::start_connect(tcp::resolver::iterator endpoint_iter) {
 
         // Start the asynchronous connect operation.
         socket.async_connect(endpoint_iter->endpoint(),
-                              boost::bind(&Sender::handle_connect, this, _1, endpoint_iter));
+                             boost::bind(&Sender::handle_connect, this, _1, endpoint_iter));
     } else { // There are no more endpoints to try. Shut down the client.
         stop();
     }

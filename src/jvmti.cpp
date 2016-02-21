@@ -207,8 +207,8 @@ list<string> jeff::get_method_local_variables(jvmtiEnv &jvmti, JNIEnv &jni, jthr
 
         unique_ptr<Object> value = get_local_value(jvmti, jni, thread, depth, slot, signature);
 
-        wstring to_string = value->toString();
-        arguments.push_back((format("%s [%s] '%s'") % name % slot % S(to_string)).str());
+        string to_string = value->toString();
+        arguments.push_back((format("%s [%s] '%s'") % name % slot % to_string).str());
 
         deallocate(jvmti, entry->generic_signature);
         deallocate(jvmti, entry->signature);

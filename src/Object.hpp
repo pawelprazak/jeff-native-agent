@@ -16,18 +16,19 @@ class Object {
 public:
     Object();
 
-    Object(const Type *const type, const std::wstring to_string);
+    Object(const Type *const type, const std::string to_string);
 
     virtual ~Object();
 
 private:
     const Type *const type;
-    const std::wstring to_string;
+
+    const std::string to_string;
 
 public:
     const Type getType() const;
 
-    const std::wstring toString() const;
+    const std::string toString() const;
 
     static std::unique_ptr<Object> from(jvmtiEnv &jvmti, JNIEnv &jni, jbooleanArray array, std::string signature);
 

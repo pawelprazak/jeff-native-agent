@@ -1,10 +1,10 @@
 #ifndef JEFF_NATIVE_AGENT_COMMON_H
 #define JEFF_NATIVE_AGENT_COMMON_H
 
-#include <string>
-#include <list>
-#include <numeric>
 #include <functional>
+#include <numeric>
+#include <list>
+#include <string>
 
 namespace jeff {
     std::string join(std::list<std::string> entries, std::function<std::string(std::string, std::string)> join_lines);

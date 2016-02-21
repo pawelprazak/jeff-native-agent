@@ -1,6 +1,8 @@
 #include "jni.hpp"
+
 #include <boost/assert.hpp>
 #include <boost/format.hpp>
+
 #include "GlobalAgentData.hpp"
 
 using namespace std;

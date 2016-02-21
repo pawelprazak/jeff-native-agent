@@ -3,8 +3,11 @@
 
 #include <jni.h>
 #include <jvmti.h>
+
 #include <array>
-#include "boost.hpp"
+#include <memory>
+
+#include <boost/noncopyable.hpp>
 
 class Type;
 

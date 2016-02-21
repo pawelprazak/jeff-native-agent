@@ -2,9 +2,11 @@
 #define JEFF_NATIVE_AGENT_JNI_HPP
 
 #include <jni.h>
-#include <string>
-#include <list>
+
 #include <functional>
+#include <list>
+#include <string>
+
 #include <boost/optional.hpp>
 
 #define THROW_JAVA_EXCEPTION(msg, exception_type) \

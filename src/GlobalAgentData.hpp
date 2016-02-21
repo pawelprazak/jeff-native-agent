@@ -3,7 +3,8 @@
 
 #include <jni.h>
 #include <jvmti.h>
-#include "Sender.h"
+
+#include "Sender.hpp"
 
 namespace jeff {
 

@@ -78,7 +78,6 @@ include_directories(${Boost_INCLUDE_DIRS})
 # Build
 
 set(SOURCE_FILES
-        src/boost.hpp
         src/GlobalAgentData.hpp src/GlobalAgentData.cpp
         src/common.cpp src/common.hpp
         src/main.cpp src/main.hpp
@@ -86,7 +85,7 @@ set(SOURCE_FILES
         src/jni.cpp src/jni.hpp
         src/Object.cpp src/Object.hpp
         src/Type.cpp src/Type.hpp
-        src/Sender.cpp src/Sender.h
+        src/Sender.cpp src/Sender.hpp
 )
 add_library(jeff-native-agent SHARED ${SOURCE_FILES})
 

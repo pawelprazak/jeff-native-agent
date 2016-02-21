@@ -1,7 +1,7 @@
 #include "common.hpp"
-#include <locale>
-#include <vector>
+
 #include <algorithm>
+#include <locale>
 
 using namespace std;
 

@@ -1,8 +1,9 @@
 #include "Object.hpp"
-#include "Type.hpp"
+
+#include "common.hpp"
 #include "jni.hpp"
 #include "jvmti.hpp"
-#include "common.hpp"
+#include "Type.hpp"
 
 using namespace std;
 using namespace boost;

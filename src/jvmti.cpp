@@ -1,10 +1,13 @@
 #include "jvmti.hpp"
-#include "jni.hpp"
-#include "Object.hpp"
-#include "GlobalAgentData.hpp"
-#include "common.hpp"
 
 #include <sstream>
+
+#include <boost/format.hpp>
+
+#include "common.hpp"
+#include "jni.hpp"
+#include "GlobalAgentData.hpp"
+#include "Object.hpp"
 
 using namespace std;
 using namespace boost;

@@ -1,10 +1,10 @@
 #ifndef JEFF_NATIVE_AGENT_SENDER_H
 #define JEFF_NATIVE_AGENT_SENDER_H
 
+#include <queue>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/streambuf.hpp>
 #include <boost/thread/thread.hpp>
-#include <bits/stl_queue.h>
 
 //
 // This class manages socket timeouts by applying the concept of a deadline.

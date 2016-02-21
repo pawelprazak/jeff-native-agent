@@ -1,8 +1,14 @@
 #include <sstream>
+
 #include "jvmti.hpp"
+
 #include "Type.hpp"
 
 using namespace jeff;
+
+Type::Type() {
+    // Empty
+}
 
 Type::Type(const std::string signature)
         : signature(signature) {

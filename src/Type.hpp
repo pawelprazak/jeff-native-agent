@@ -8,7 +8,7 @@
 class Type : Object {
 
 public:
-    Type() { }
+    Type();
 
     Type(const std::string signature);
 

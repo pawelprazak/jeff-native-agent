@@ -1,4 +1,4 @@
-#include "Sender.h"
+#include "Sender.hpp"
 
 #include <boost/asio.hpp>
 
@@ -16,7 +16,6 @@ Sender::Sender()
 Sender::~Sender() {
     stop();
 }
-
 
 std::unique_ptr<Sender> Sender::create(std::string host, std::string port) {
     try {

@@ -2,10 +2,12 @@
 #define JEFF_NATIVE_AGENT_JVMTI_H
 
 #include "jvmti.h"
-#include <string>
-#include <list>
+
 #include <functional>
 #include <memory>
+#include <list>
+#include <string>
+
 #include <boost/assert.hpp>
 
 #define ASSERT_JVMTI_MSG(error, msg) ((error == JVMTI_ERROR_NONE) \

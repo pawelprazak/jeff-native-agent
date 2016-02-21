@@ -164,7 +164,7 @@ void JNICALL VMInitCallback(jvmtiEnv *jvmti, JNIEnv *env, jthread thread) {
     {
         /* The VM has started. */
         string threadName = get_thread_name(*jvmti, *env, thread);
-        auto message = boost::format("VMInit thread '%s' (JVMTI_EVENT_VM_INIT)\n") % threadName;
+        std::string message = (boost::format("VMInit thread '%s' (JVMTI_EVENT_VM_INIT)\n") % threadName).str();
         std::cout << message;
 
         /* Indicate VM has initialized */
@@ -174,7 +174,7 @@ void JNICALL VMInitCallback(jvmtiEnv *jvmti, JNIEnv *env, jthread thread) {
         jint err = live(*jvmti);
         ASSERT_MSG(err == JVMTI_ERROR_NONE, (boost::format("live() returned an error '%s'") % err).str().c_str());
 
-        gdata.sender->send(message.str());
+        gdata.sender->send(message);
     }
     exit_critical_section(jvmti);
 }
@@ -252,12 +252,12 @@ void JNICALL ExceptionCallback(jvmtiEnv *jvmti,
     auto join_lines = [](string a, string b) { return "\t" + a + "\n\t" + b; };
     string stack_trace = join(get_stack_trace(*jvmti, *jni, thread), join_lines);
 
-    auto the_message =
-            boost::format("Uncought exception: %s, message: '%s'\n\tin method: %s [%s]\nStack trace:%s\n\n")
-            % exceptionSignature % message % methodName % line % stack_trace;
+    std::string the_message =
+            (boost::format("Uncought exception: %s, message: '%s'\n\tin method: %s [%s]\nStack trace:%s\n\n")
+             % exceptionSignature % message % methodName % line % stack_trace).str();
     std::cout << the_message;
 
-    gdata.sender->send(the_message.str());
+    gdata.sender->send(the_message);
 }
 
 void JNICALL ExceptionCatchCallback(jvmtiEnv *jvmti,
@@ -278,11 +278,12 @@ void JNICALL ExceptionCatchCallback(jvmtiEnv *jvmti,
     string message = call_method(*jni, exception, "getMessage", "()Ljava/lang/String;", string_transformer);
     string line = get_location(*jvmti, method, location);
 
-    auto the_message = boost::format("Cought exception: %s, message: '%s'\n\tin method: %s [%s]\n")
-                       % exceptionSignature % message % methodName % line;
+    std::string the_message =
+            (boost::format("Cought exception: %s, message: '%s'\n\tin method: %s [%s]\n")
+                       % exceptionSignature % message % methodName % line).str();
     std::cout << the_message;
 
-    gdata.sender->send(the_message.str());
+    gdata.sender->send(the_message);
 }
 
 void JNICALL ThreadStartCallback(jvmtiEnv *jvmti,

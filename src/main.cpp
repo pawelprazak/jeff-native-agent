@@ -29,9 +29,8 @@ Agent_OnUnload(JavaVM *jvm) {
     /* Make sure all allocated space is freed */
 }
 
-jint init(JavaVM *jvm, char *options) {
-    jvmtiEnv *jvmti;
-    jint result = jvm->GetEnv((void **) &jvmti, JVMTI_VERSION_1_2);
+jint get_jvmti(JavaVM *jvm, jvmtiEnv **jvmti) {
+    jint result = jvm->GetEnv((void **) jvmti, JVMTI_VERSION_1_2);
     if (result != JNI_OK) {
         /* This means that the VM was unable to obtain this version of the
          *   JVMTI interface, this is a fatal error.
@@ -41,6 +40,24 @@ jint init(JavaVM *jvm, char *options) {
                                            " JNIEnv's GetEnv() returned %d\n") % JVMTI_VERSION_1_2 % result;
         return JNI_ERR;
     }
+    return JNI_OK;
+}
+
+void parse_options(GlobalAgentData &data, char *options) {
+    // TODO
+//    gdata.enable_daemon_connection = true;
+    gdata.enable_daemon_connection = false;
+    gdata.daemon_host = "localhost";
+    gdata.daemon_port = "9999";
+}
+
+jint init(JavaVM *jvm, char *options) {
+    jvmtiEnv *jvmti;
+    jint result = get_jvmti(jvm, &jvmti);
+    if (result == JNI_ERR) {
+        return JNI_ERR;
+    }
+    parse_options(gdata, options);
 
     /* Setup initial global agent data area */
     gdata.jvm = jvm;
@@ -138,7 +155,7 @@ jint live(jvmtiEnv &jvmti) {
 //    error = jvmti.SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_RESOURCE_EXHAUSTED, (jthread) NULL);
 //    if (is_jvmti_error(jvmti, error, "Cannot set event notification: JVMTI_EVENT_RESOURCE_EXHAUSTED")) return JNI_ERR;
 
-    std::cout << "The agent live phase successful\n";
+    std::cout << "The JEFF agent is live.\n";
     return JNI_OK;
 }
 
@@ -147,12 +164,21 @@ void JNICALL VMStartCallback(jvmtiEnv *jvmti, JNIEnv *env) {
     enter_critical_section(jvmti);
     {
         /* The VM has started. */
-        std::string message = "VM Started (JVMTI_EVENT_VM_START)";
-        std::cout << message << endl;
-
-        /* Indicate VM has started */
         gdata.vm_is_started = JNI_TRUE;
-        gdata.sender = Sender::create("localhost", "9999");
+
+        if (gdata.enable_daemon_connection) {
+            try {
+                gdata.sender = Sender::create(gdata.daemon_host, gdata.daemon_port);
+            } catch (std::exception &e) {
+                std::cerr << "Exception: " << e.what() << "\n";
+                THROW_JAVA_EXCEPTION(e.what(), AssertionError);
+            }
+        } else {
+            gdata.sender = Sender::create();
+        }
+        gdata.sender->start();
+
+        std::string message = "VM Started (JVMTI_EVENT_VM_START)";
         gdata.sender->send(message);
     }
     exit_critical_section(jvmti);
@@ -163,17 +189,14 @@ void JNICALL VMInitCallback(jvmtiEnv *jvmti, JNIEnv *env, jthread thread) {
     enter_critical_section(jvmti);
     {
         /* The VM has started. */
-        string threadName = get_thread_name(*jvmti, *env, thread);
-        std::string message = (boost::format("VMInit thread '%s' (JVMTI_EVENT_VM_INIT)\n") % threadName).str();
-        std::cout << message;
-
-        /* Indicate VM has initialized */
         gdata.vm_is_initialized = JNI_TRUE;
 
         /* The VM is now initialized, at this time we make our requests for additional events. */
         jint err = live(*jvmti);
         ASSERT_MSG(err == JVMTI_ERROR_NONE, (boost::format("live() returned an error '%s'") % err).str().c_str());
 
+        string threadName = get_thread_name(*jvmti, *env, thread);
+        std::string message = (boost::format("VMInit thread '%s' (JVMTI_EVENT_VM_INIT)\n") % threadName).str();
         gdata.sender->send(message);
     }
     exit_critical_section(jvmti);
@@ -184,8 +207,6 @@ void JNICALL VMDeathCallback(jvmtiEnv *jvmti, JNIEnv *env) {
     enter_critical_section(jvmti);
     {
         /* The VM has died. */
-        std::string message = "VM Died (JVMTI_EVENT_VM_DEATH)\n";
-        std::cout << message;
 
         /* The critical section here is important to hold back the VM death
          *    until all other callbacks have completed.
@@ -200,10 +221,13 @@ void JNICALL VMDeathCallback(jvmtiEnv *jvmti, JNIEnv *env) {
          */
         gdata.vm_is_dead = JNI_TRUE;
 
+        std::string message = "VM Died (JVMTI_EVENT_VM_DEATH)\n";
         if (gdata.sender != nullptr) {
             gdata.sender->send(message);
             gdata.sender->flush();
             gdata.sender->stop();
+        } else {
+            std::cout << message;
         }
     }
     exit_critical_section(jvmti);
@@ -255,7 +279,6 @@ void JNICALL ExceptionCallback(jvmtiEnv *jvmti,
     std::string the_message =
             (boost::format("Uncought exception: %s, message: '%s'\n\tin method: %s [%s]\nStack trace:%s\n\n")
              % exceptionSignature % message % methodName % line % stack_trace).str();
-    std::cout << the_message;
 
     gdata.sender->send(the_message);
 }
@@ -280,8 +303,7 @@ void JNICALL ExceptionCatchCallback(jvmtiEnv *jvmti,
 
     std::string the_message =
             (boost::format("Cought exception: %s, message: '%s'\n\tin method: %s [%s]\n")
-                       % exceptionSignature % message % methodName % line).str();
-    std::cout << the_message;
+             % exceptionSignature % message % methodName % line).str();
 
     gdata.sender->send(the_message);
 }
@@ -342,7 +364,6 @@ void JNICALL ResourceExhaustedCallback(jvmtiEnv *jvmti,
                     break;
                 }
             }
-            std::cout << message;
             gdata.sender->send(message);
         }
     }

@@ -3,30 +3,31 @@
 
 #include "jvmti.h"
 
+namespace jeff {
+    struct GlobalAgentData;
+}
+
 /**
  * The VM will start the agent by calling this function.
  */
-JNIEXPORT jint JNICALL
-Agent_OnLoad(JavaVM *jvm, char *options, void *reserved);
+JNIEXPORT jint JNICALL Agent_OnLoad(JavaVM *jvm, char *options, void *reserved);
 
 /**
  * A VM may support a mechanism that allows agents to be started in the VM during the live phase.
  * Note that some capabilities may not be available in the live phase.
  */
-JNIEXPORT jint JNICALL
-Agent_OnAttach(JavaVM *jvm, char *options, void *reserved);
+JNIEXPORT jint JNICALL Agent_OnAttach(JavaVM *jvm, char *options, void *reserved);
 
 /**
  * This function will be called by the VM when the library is about to be unloaded.
  * This function can be used to clean-up resources allocated by the agent.
  */
-JNIEXPORT void JNICALL
-Agent_OnUnload(JavaVM *jvm);
+JNIEXPORT void JNICALL Agent_OnUnload(JavaVM *jvm);
 
 /**
  * Main entry points
  */
- 
+
 static jint init(JavaVM *jvm, char *options);
 
 static jint live(jvmtiEnv &jvmti);
@@ -34,7 +35,7 @@ static jint live(jvmtiEnv &jvmti);
 /**
  * JVMTI calback functions
  */
- 
+
 static void JNICALL VMStartCallback(jvmtiEnv *jvmti, JNIEnv *env);
 
 static void JNICALL VMInitCallback(jvmtiEnv *jvmti, JNIEnv *env, jthread thread);
@@ -59,7 +60,13 @@ static void JNICALL ThreadEndCallback(jvmtiEnv *jvmti, JNIEnv *jni, jthread thre
 
 static void JNICALL ResourceExhaustedCallback(jvmtiEnv *jvmti, JNIEnv *env, jint flags,
                                               const void *reserved, const char *description);
-                                              
+
+/* Special utility functions  */
+
+jint get_jvmti(JavaVM *jvm, jvmtiEnv **jvmti);
+
+void parse_options(jeff::GlobalAgentData &data, char *options);
+
 /* Generic JVMTI utility functions */
 
 static void enter_critical_section(jvmtiEnv *jvmti);

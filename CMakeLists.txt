@@ -86,6 +86,8 @@ set(SOURCE_FILES
         src/Object.cpp src/Object.hpp
         src/Type.cpp src/Type.hpp
         src/Sender.cpp src/Sender.hpp
+        src/TcpSender.cpp src/TcpSender.hpp
+        src/StdSender.cpp src/StdSender.hpp
 )
 add_library(jeff-native-agent SHARED ${SOURCE_FILES})
 

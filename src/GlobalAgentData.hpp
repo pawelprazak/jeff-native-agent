@@ -4,6 +4,9 @@
 #include <jni.h>
 #include <jvmti.h>
 
+#include <string>
+#include <memory>
+
 #include "Sender.hpp"
 
 namespace jeff {
@@ -18,6 +21,9 @@ namespace jeff {
         /* Data access Lock */
         jrawMonitorID lock;
         /* Networking */
+        bool enable_daemon_connection;
+        std::string daemon_host;
+        std::string daemon_port;
         std::unique_ptr<Sender> sender;
     } GlobalAgentData;
 

@@ -46,12 +46,15 @@ namespace jeff {
 
     void delete_local_ref(JNIEnv &jni, jclass type);
 
+    JNIEnv *get_current_jni();
+
+    void throw_by_name(JNIEnv &jni, const std::string exceptionType, const std::string exceptionMessage);
+
     void __throw_exception(const char *message, const char *exceptionType,
                            const char *function, const char *file, int line);
 
     void __throw_exception(const char *message, const char *expression, const char *exceptionType,
                            const char *function, const char *file, int line);
-
 }
 
 #endif //JEFF_NATIVE_AGENT_JNI_HPP

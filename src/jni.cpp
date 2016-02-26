@@ -143,6 +143,15 @@ void jeff::delete_local_ref(JNIEnv &jni, jclass type) {
     ASSERT_MSG(!jni.ExceptionCheck(), "Unable to delete local reference");
 }
 
+void jeff::throw_by_name(JNIEnv &jni, const string exceptionType, const string exceptionMessage) {
+    jclass type = find_class(jni, exceptionType);
+    /* if type is NULL, an exception has already been thrown by JVM */
+    if (type != NULL) {
+        jni.ThrowNew(type, exceptionMessage.c_str());
+    }
+    jni.DeleteLocalRef(type);
+}
+
 /**
  * Use ASSERT_MSG macro.
  *
@@ -163,16 +172,15 @@ void jeff::__throw_exception(const char *message, const char *expression, const 
 
     std::cerr << exceptionMessage << std::endl << std::endl;
 
-    JNIEnv *jni;
-    jeff::gdata.jvm->AttachCurrentThread((void **) &jni, NULL);  // Get the JNIEnv by attaching to the current thread.
-    BOOST_ASSERT_MSG(jni != NULL, "Unable to attach to current thread to get JNIEnv");
+    JNIEnv *jni = get_current_jni();
+    throw_by_name(*jni, exceptionType, exceptionMessage.str());
+}
 
-    jclass type = jni->FindClass(exceptionType);
-    /* if type is NULL, an exception has already been thrown by JVM */
-    if (type != NULL) {
-        jni->ThrowNew(type, exceptionMessage.str().c_str());
-    }
-    jni->DeleteLocalRef(type);
+JNIEnv *jeff::get_current_jni() {
+    JNIEnv *jni;
+    gdata.jvm->AttachCurrentThread((void **) &jni, nullptr);  // Get the JNIEnv by attaching to the current thread.
+    BOOST_ASSERT_MSG(jni != nullptr, "Unable to attach to current thread to get JNIEnv");
+    return jni;
 }
 
 /**
